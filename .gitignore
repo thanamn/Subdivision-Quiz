@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vite/
+.DS_Store
+*.log
+data/raw/
+qa-*.png
+.vite-dev.*.log
