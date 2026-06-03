@@ -69,6 +69,17 @@ const ENGLISH_TYPE_WORDS = new Set([
   "state",
   "territory",
 ]);
+const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+  "DNK-3419": "Capital Region of Denmark",
+  "MEX-2727": "Mexico City",
+  "MNP-4940": "Northern Islands",
+  "SPM-4866": "Saint-Pierre",
+};
+const EXTRA_ALIAS_OVERRIDES: Record<string, string[]> = {
+  "DNK-3419": ["Capital Region", "Hovedstaden", "Region Hovedstaden"],
+  "MEX-2727": ["Distrito Federal", "Ciudad de México", "CDMX", "Mexico D.F."],
+  "MNP-4940": ["Northern Islands Municipality"],
+};
 
 export function normalizeGuess(value: string) {
   return value
@@ -123,6 +134,11 @@ function splitAliasCandidates(value?: string) {
 }
 
 function bestEnglishName(raw: RawAdmin1Properties) {
+  const override = raw.adm1_code ? DISPLAY_NAME_OVERRIDES[raw.adm1_code] : undefined;
+  if (override) {
+    return override;
+  }
+
   const name = raw.name_en || raw.name || raw.gn_name || "";
   const normalized = normalizeGuess(name);
   const expandedAlias = splitAliasCandidates(raw.name_alt).find((alias) => {
@@ -135,6 +151,22 @@ function bestEnglishName(raw: RawAdmin1Properties) {
   });
 
   return expandedAlias || name;
+}
+
+function validNameEnAlias(raw: RawAdmin1Properties, displayName: string) {
+  if (!raw.name_en) {
+    return undefined;
+  }
+
+  const overriddenName = raw.adm1_code ? DISPLAY_NAME_OVERRIDES[raw.adm1_code] : undefined;
+  if (
+    overriddenName &&
+    normalizeGuess(raw.name_en) !== normalizeGuess(displayName)
+  ) {
+    return undefined;
+  }
+
+  return raw.name_en;
 }
 
 function compactLocalNames(
@@ -253,11 +285,13 @@ function toSubdivisionFeature(
     name,
   );
   const aliases = compactAliases([
+    name,
     raw.name,
-    raw.name_en,
+    validNameEnAlias(raw, name),
     raw.name_alt,
     fallbackLocalNativeName?.name,
     raw.gn_name,
+    ...(raw.adm1_code ? EXTRA_ALIAS_OVERRIDES[raw.adm1_code] || [] : []),
     ...nativeNames.map((nativeName) => nativeName.name),
   ]);
 

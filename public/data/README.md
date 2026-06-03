@@ -3,6 +3,9 @@
 `admin1.topo.json` is generated from Natural Earth's **Admin 1 - States,
 Provinces** 1:10m cultural vector dataset.
 
+The current checked-in file was generated from Natural Earth Admin-1 version
+5.1.1, fetched from Natural Earth's CDN on June 3, 2026.
+
 `country-regions.json` is generated from the `world-countries` package and is
 used to group countries into region quizzes and identify native-language codes
 for Wikidata label lookups.
