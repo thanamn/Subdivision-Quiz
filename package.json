@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
-    "check:normalizer": "node scripts/check-normalizer.mjs",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "check": "npm run test:run && npm run build",
     "preview": "vite preview --host 127.0.0.1",
     "data": "node scripts/build-data.mjs"
   },
@@ -28,7 +30,8 @@
     "extract-zip": "^2.0.1",
     "mapshaper": "^0.6.113",
     "typescript": "^5.9.3",
-    "world-countries": "^5.1.0",
-    "vite": "^6.0.11"
+    "vite": "^6.0.11",
+    "vitest": "^4.1.8",
+    "world-countries": "^5.1.0"
   }
 }
