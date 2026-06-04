@@ -200,11 +200,18 @@ a {
   line-height: 1.1;
 }
 
-.help-card p {
+.help-card p,
+.help-card ul {
   margin: 4px 0 0;
   color: #526269;
   font-size: 0.9rem;
   line-height: 1.35;
+}
+
+.help-card ul {
+  display: grid;
+  gap: 3px;
+  padding-left: 18px;
 }
 
 .help-dismiss {
@@ -292,7 +299,7 @@ a {
 
 .quiz-bar {
   display: grid;
-  grid-template-columns: minmax(280px, 1.45fr) minmax(180px, 0.75fr) minmax(190px, 0.9fr) minmax(170px, 0.7fr);
+  grid-template-columns: minmax(160px, 0.65fr) minmax(0, 1fr) minmax(320px, 1fr);
   align-items: stretch;
   gap: 8px;
   margin-top: 10px;
@@ -310,7 +317,7 @@ a {
 }
 
 .quiz-bar .notice {
-  grid-column: span 2;
+  grid-column: auto;
 }
 
 .map-shell {
@@ -636,7 +643,7 @@ a {
   }
 
   .quiz-bar {
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.7fr);
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.7fr);
   }
 
   .quiz-bar .guess-form,
@@ -729,6 +736,11 @@ a {
 
   .guess-form button {
     grid-column: 1 / -1;
+  }
+
+  .panel-actions button {
+    gap: 5px;
+    padding: 0 9px;
   }
 
   .metric-row strong {

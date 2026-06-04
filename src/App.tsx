@@ -32,7 +32,7 @@ const DATA_URL = `${import.meta.env.BASE_URL}data/admin1.topo.json`;
 const COUNTRY_REGIONS_URL = `${import.meta.env.BASE_URL}data/country-regions.json`;
 const LAST_SCOPE_KEY = "subdivision-quiz:last-scope";
 const MODE_KEY = "subdivision-quiz:match-mode";
-const HELP_CARD_KEY = "subdivision-quiz:help-dismissed";
+const HELP_CARD_KEY = "subdivision-quiz:help-dismissed:v2";
 const WIKIDATA_ENDPOINT = "https://www.wikidata.org/w/api.php";
 const WIKIDATA_BATCH_SIZE = 35;
 const NATIVE_NAME_CANDIDATE_LIMIT = 8;
@@ -727,9 +727,15 @@ export default function App() {
               <div>
                 <strong>How to play</strong>
                 <p>
-                  Type full subdivision names, including local or native-script names when
-                  available. Postal abbreviations like US state codes do not count.
+                  Name the first-level subdivisions in the selected country, region, or
+                  the whole world.
                 </p>
+                <ul>
+                  <li>Type an English, local, romanized, or native-script name.</li>
+                  <li>Answers are accepted as soon as they exactly match a known name.</li>
+                  <li>If one name belongs to multiple places, choose one or add them all.</li>
+                  <li>Your progress saves automatically; Reset starts this quiz over.</li>
+                </ul>
               </div>
               <button
                 type="button"
