@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
+    "check:normalizer": "node scripts/check-normalizer.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "data": "node scripts/build-data.mjs"
   },
