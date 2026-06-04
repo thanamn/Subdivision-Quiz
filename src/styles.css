@@ -365,12 +365,49 @@ a {
   stroke-width: 2;
 }
 
+.tiny-marker {
+  cursor: pointer;
+  opacity: var(--marker-opacity, 0.9);
+  stroke: #172126;
+  stroke-width: 2;
+  transition:
+    opacity 120ms ease,
+    r 120ms ease;
+  vector-effect: non-scaling-stroke;
+}
+
+.tiny-marker.is-pending {
+  fill: #ffffff;
+  stroke: #4f5f66;
+}
+
+.tiny-marker.is-found {
+  fill: var(--found-fill, #0f8b8d);
+}
+
+.tiny-marker.is-missed {
+  fill: #efb59f;
+}
+
+.tiny-marker:hover,
+.tiny-marker.is-active {
+  opacity: 1;
+  stroke: #172126;
+  stroke-width: 3;
+}
+
 .zoom-controls {
   position: absolute;
   right: 12px;
   top: 12px;
   display: grid;
   gap: 6px;
+}
+
+.zoom-controls .detail-toggle.is-active {
+  border-color: #0f8b8d;
+  background: #dff1f0;
+  color: #0c6264;
 }
 
 .map-tooltip {
