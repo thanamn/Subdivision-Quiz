@@ -11,6 +11,11 @@ import type { Scope, SubdivisionFeature } from "./types";
 const WIDTH = 1000;
 const HEIGHT = 620;
 const MAP_MAX_ZOOM = 500;
+const FOCUS_MAX_ZOOM = 180;
+const FOCUS_MIN_ZOOM = 1.15;
+const FOCUS_TINY_MIN_ZOOM = 28;
+const FOCUS_PADDING_X = 140;
+const FOCUS_PADDING_Y = 110;
 const TINY_MARKERS_KEY = "subdivision-quiz:tiny-markers";
 const TINY_GEOGRAPHIC_AREA = 0.0000015;
 const TINY_PROJECTED_MAX_SIDE = 24;
@@ -48,15 +53,26 @@ type TooltipState = {
 };
 
 type QuizMapProps = {
+  clickable?: boolean;
+  currentTargetId?: string | null;
+  focusFeatureId?: string | null;
+  focusRequestNonce?: number;
+  forceTinyMarkers?: boolean;
   features: SubdivisionFeature[];
   guessed: Set<string>;
+  hintLevel?: number;
   revealed: boolean;
+  revealedIds?: Set<string>;
+  wrongFlashId?: string | null;
+  wrongIds?: Set<string>;
   activeId: string | null;
   scope: Scope;
+  onFeatureClick?: (feature: SubdivisionFeature) => void;
   onHover: (id: string | null) => void;
 };
 
 type PathDatum = {
+  bounds: [[number, number], [number, number]];
   id: string;
   feature: SubdivisionFeature;
   d: string;
@@ -71,11 +87,25 @@ type TinyMarkerDatum = {
   y: number;
 };
 
+type HintBox = {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
 type MapShapesProps = {
   activeId: string | null;
+  clickable: boolean;
   guessed: Set<string>;
   pathData: PathDatum[];
   revealed: boolean;
+  revealedIds: Set<string>;
+  wrongIds: Set<string>;
+  onClick?: (
+    event: MouseEvent<SVGPathElement | SVGCircleElement>,
+    feature: SubdivisionFeature,
+  ) => void;
   onEnter: (feature: SubdivisionFeature) => void;
   onLeave: () => void;
   onMove: (
@@ -86,16 +116,28 @@ type MapShapesProps = {
 
 type TinyMarkersProps = {
   activeId: string | null;
+  clickable: boolean;
   guessed: Set<string>;
   markerData: PathDatum[];
   revealed: boolean;
+  revealedIds: Set<string>;
+  wrongIds: Set<string>;
   zoomScale: number;
+  onClick?: (
+    event: MouseEvent<SVGPathElement | SVGCircleElement>,
+    feature: SubdivisionFeature,
+  ) => void;
   onEnter: (feature: SubdivisionFeature) => void;
   onLeave: () => void;
   onMove: (
     event: MouseEvent<SVGPathElement | SVGCircleElement>,
     feature: SubdivisionFeature,
   ) => void;
+};
+
+type WrongFlashOverlayProps = {
+  item: PathDatum | null;
+  zoomScale: number;
 };
 
 function featureCollection(features: SubdivisionFeature[]): FeatureCollection {
@@ -217,11 +259,114 @@ function tinyMarkerForFeature(
     : null;
 }
 
+function clamp(value: number, min: number, max: number) {
+  if (max < min) {
+    return min;
+  }
+
+  return Math.min(max, Math.max(min, value));
+}
+
+function seededUnit(seed: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0) / 4294967295;
+}
+
+function hintedRange(min: number, max: number, seed: string) {
+  return min + (max - min) * seededUnit(seed);
+}
+
+function hintBoxForFeature(
+  feature: SubdivisionFeature,
+  features: SubdivisionFeature[],
+  path: ReturnType<typeof geoPath>,
+  hintLevel: number,
+): HintBox | null {
+  if (hintLevel <= 0) {
+    return null;
+  }
+
+  const mapBounds = path.bounds(featureCollection(features));
+  const targetBounds = path.bounds(feature);
+  const mapWidth = mapBounds[1][0] - mapBounds[0][0];
+  const mapHeight = mapBounds[1][1] - mapBounds[0][1];
+  const targetWidth = targetBounds[1][0] - targetBounds[0][0];
+  const targetHeight = targetBounds[1][1] - targetBounds[0][1];
+
+  if (![mapWidth, mapHeight, targetWidth, targetHeight].every(Number.isFinite)) {
+    return null;
+  }
+
+  const hintRatios = [0.46, 0.25, 0.13];
+  const ratio = hintRatios[Math.min(hintLevel, hintRatios.length) - 1];
+  const padding = Math.max(6, Math.max(mapWidth, mapHeight) * 0.012);
+  const width = Math.min(
+    mapWidth,
+    Math.max(mapWidth * ratio, targetWidth + padding * 2),
+  );
+  const height = Math.min(
+    mapHeight,
+    Math.max(mapHeight * ratio, targetHeight + padding * 2),
+  );
+
+  const minX = targetBounds[1][0] - width;
+  const maxX = targetBounds[0][0];
+  const minY = targetBounds[1][1] - height;
+  const maxY = targetBounds[0][1];
+  const rawX = hintedRange(minX, maxX, `${feature.properties.id}:x:${hintLevel}`);
+  const rawY = hintedRange(minY, maxY, `${feature.properties.id}:y:${hintLevel}`);
+  const x = clamp(rawX, mapBounds[0][0], mapBounds[1][0] - width);
+  const y = clamp(rawY, mapBounds[0][1], mapBounds[1][1] - height);
+
+  return {
+    height,
+    width,
+    x,
+    y,
+  };
+}
+
+function focusTransformForItem(item: PathDatum) {
+  const bounds = item.bounds;
+  const width = Math.max(bounds[1][0] - bounds[0][0], 1);
+  const height = Math.max(bounds[1][1] - bounds[0][1], 1);
+  const centerX = item.tinyMarker
+    ? item.tinyMarker.x
+    : (bounds[0][0] + bounds[1][0]) / 2;
+  const centerY = item.tinyMarker
+    ? item.tinyMarker.y
+    : (bounds[0][1] + bounds[1][1]) / 2;
+  const fitScale = Math.min(
+    (WIDTH - FOCUS_PADDING_X * 2) / width,
+    (HEIGHT - FOCUS_PADDING_Y * 2) / height,
+  );
+  const scale = clamp(
+    item.tinyMarker
+      ? Math.max(fitScale, FOCUS_TINY_MIN_ZOOM)
+      : fitScale,
+    FOCUS_MIN_ZOOM,
+    FOCUS_MAX_ZOOM,
+  );
+  const x = WIDTH / 2 - centerX * scale;
+  const y = HEIGHT / 2 - centerY * scale;
+
+  return zoomIdentity.translate(x, y).scale(scale);
+}
+
 const MapShapes = memo(function MapShapes({
   activeId,
+  clickable,
   guessed,
   pathData,
   revealed,
+  revealedIds,
+  wrongIds,
+  onClick,
   onEnter,
   onLeave,
   onMove,
@@ -230,10 +375,19 @@ const MapShapes = memo(function MapShapes({
     <>
       {pathData.map((item) => {
         const isFound = guessed.has(item.id);
+        const isWrong = wrongIds.has(item.id);
+        const isRevealed = revealedIds.has(item.id);
         const isActive = activeId === item.id;
         const className = [
           "subdivision",
-          isFound ? "is-found" : revealed ? "is-missed" : "is-pending",
+          clickable ? "is-clickable" : "",
+          isFound
+            ? "is-found"
+            : isWrong
+              ? "is-wrong"
+              : revealed || isRevealed
+                ? "is-missed"
+                : "is-pending",
           isActive ? "is-active" : "",
         ]
           .filter(Boolean)
@@ -248,6 +402,7 @@ const MapShapes = memo(function MapShapes({
             onMouseEnter={() => onEnter(item.feature)}
             onMouseMove={(event) => onMove(event, item.feature)}
             onMouseLeave={onLeave}
+            onClick={(event) => onClick?.(event, item.feature)}
           />
         );
       })}
@@ -257,10 +412,14 @@ const MapShapes = memo(function MapShapes({
 
 const TinyMarkers = memo(function TinyMarkers({
   activeId,
+  clickable,
   guessed,
   markerData,
   revealed,
+  revealedIds,
+  wrongIds,
   zoomScale,
+  onClick,
   onEnter,
   onLeave,
   onMove,
@@ -279,10 +438,19 @@ const TinyMarkers = memo(function TinyMarkers({
         const radius = tinyMarkerRadius(item.tinyMarker, zoomScale);
         const markerOpacity = tinyMarkerOpacity(item.tinyMarker, zoomScale);
         const isFound = guessed.has(item.id);
+        const isWrong = wrongIds.has(item.id);
+        const isRevealed = revealedIds.has(item.id);
         const isActive = activeId === item.id;
         const className = [
           "tiny-marker",
-          isFound ? "is-found" : revealed ? "is-missed" : "is-pending",
+          clickable ? "is-clickable" : "",
+          isFound
+            ? "is-found"
+            : isWrong
+              ? "is-wrong"
+              : revealed || isRevealed
+                ? "is-missed"
+                : "is-pending",
           isActive ? "is-active" : "",
         ]
           .filter(Boolean)
@@ -304,6 +472,7 @@ const TinyMarkers = memo(function TinyMarkers({
             onMouseEnter={() => onEnter(item.feature)}
             onMouseMove={(event) => onMove(event, item.feature)}
             onMouseLeave={onLeave}
+            onClick={(event) => onClick?.(event, item.feature)}
           />
         );
       })}
@@ -311,12 +480,49 @@ const TinyMarkers = memo(function TinyMarkers({
   );
 });
 
+const WrongFlashOverlay = memo(function WrongFlashOverlay({
+  item,
+  zoomScale,
+}: WrongFlashOverlayProps) {
+  if (!item) {
+    return null;
+  }
+
+  const radius = item.tinyMarker
+    ? Math.max(tinyMarkerRadius(item.tinyMarker, zoomScale), 4 / zoomScale)
+    : null;
+
+  return (
+    <g className="wrong-flash-overlay" pointerEvents="none">
+      <path className="wrong-flash-shape" d={item.d} />
+      {item.tinyMarker && radius ? (
+        <circle
+          className="wrong-flash-marker"
+          cx={item.tinyMarker.x}
+          cy={item.tinyMarker.y}
+          r={radius}
+        />
+      ) : null}
+    </g>
+  );
+});
+
 function QuizMap({
+  clickable = false,
+  currentTargetId = null,
+  focusFeatureId = null,
+  focusRequestNonce = 0,
   features,
+  forceTinyMarkers = false,
   guessed,
+  hintLevel = 0,
   revealed,
+  revealedIds = new Set<string>(),
+  wrongFlashId = null,
+  wrongIds = new Set<string>(),
   activeId,
   scope,
+  onFeatureClick,
   onHover,
 }: QuizMapProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -348,16 +554,25 @@ function QuizMap({
   const pathData = useMemo(
     () =>
       features
-        .map((feature) => ({
-          id: feature.properties.id,
-          feature,
-          d: path(feature) || "",
-          tinyMarker: tinyMarkerForFeature(feature, path, scope),
-          style: {
-            "--found-fill": MAP_COLORS[feature.properties.colorIndex],
-          } as CSSProperties,
-        }))
-        .filter((item) => item.d),
+        .map((feature) => {
+          const d = path(feature) || "";
+          const bounds = path.bounds(feature);
+          return {
+            bounds,
+            id: feature.properties.id,
+            feature,
+            d,
+            tinyMarker: tinyMarkerForFeature(feature, path, scope),
+            style: {
+              "--found-fill": MAP_COLORS[feature.properties.colorIndex],
+            } as CSSProperties,
+          };
+        })
+        .filter(
+          (item) =>
+            item.d &&
+            item.bounds.flat().every((value) => Number.isFinite(value)),
+        ),
     [features, path, scope],
   );
   const tinyMarkerData = useMemo(
@@ -365,11 +580,29 @@ function QuizMap({
     [pathData],
   );
   const hasTinyMarkers = tinyMarkerData.length > 0;
+  const effectiveTinyMarkersVisible = tinyMarkersVisible || forceTinyMarkers;
   const tinyMarkerToggleLabel = hasTinyMarkers
-    ? tinyMarkersVisible
+    ? forceTinyMarkers
+      ? "Tiny places are clickable in Find mode"
+      : tinyMarkersVisible
       ? "Hide tiny places"
       : "Show tiny places"
     : "No tiny places in this view";
+  const hintBox = useMemo(() => {
+    const target = currentTargetId
+      ? features.find((feature) => feature.properties.id === currentTargetId)
+      : undefined;
+
+    return target ? hintBoxForFeature(target, features, path, hintLevel) : null;
+  }, [currentTargetId, features, hintLevel, path]);
+  const wrongFlashItem = useMemo(
+    () => pathData.find((item) => item.id === wrongFlashId) || null,
+    [pathData, wrongFlashId],
+  );
+  const focusItem = useMemo(
+    () => pathData.find((item) => item.id === focusFeatureId) || null,
+    [focusFeatureId, pathData],
+  );
 
   const scopeResetKey = `${scope.kind}:${scope.value}:${features.length}`;
 
@@ -432,6 +665,17 @@ function QuizMap({
       .call(zoomRef.current.transform, zoomIdentity);
   }, [scopeResetKey]);
 
+  useEffect(() => {
+    if (!focusItem || !focusRequestNonce || !svgRef.current || !zoomRef.current) {
+      return;
+    }
+
+    select(svgRef.current)
+      .transition()
+      .duration(520)
+      .call(zoomRef.current.transform, focusTransformForItem(focusItem));
+  }, [focusItem, focusRequestNonce]);
+
   function zoomBy(factor: number) {
     if (!svgRef.current || !zoomRef.current) {
       return;
@@ -456,14 +700,20 @@ function QuizMap({
     (
       event: MouseEvent<SVGPathElement | SVGCircleElement>,
       feature: SubdivisionFeature,
+      forceShow = false,
     ) => {
       const isFound = guessed.has(feature.properties.id);
+      const canShowName =
+        isFound ||
+        revealed ||
+        revealedIds.has(feature.properties.id) ||
+        wrongIds.has(feature.properties.id);
       const rect = svgRef.current?.getBoundingClientRect();
       if (!rect) {
         return;
       }
 
-      if (!isFound && !revealed) {
+      if (!canShowName && !forceShow) {
         setTooltip(null);
         return;
       }
@@ -480,7 +730,20 @@ function QuizMap({
         meta,
       });
     },
-    [guessed, revealed],
+    [guessed, revealed, revealedIds, wrongIds],
+  );
+
+  const clickFeature = useCallback(
+    (
+      event: MouseEvent<SVGPathElement | SVGCircleElement>,
+      feature: SubdivisionFeature,
+    ) => {
+      onFeatureClick?.(feature);
+      if (clickable) {
+        showTooltip(event, feature, true);
+      }
+    },
+    [clickable, onFeatureClick, showTooltip],
   );
 
   const enterFeature = useCallback(
@@ -508,25 +771,43 @@ function QuizMap({
         <g ref={mapGroupRef}>
           <MapShapes
             activeId={activeId}
+            clickable={clickable}
             guessed={guessed}
             pathData={pathData}
             revealed={revealed}
+            revealedIds={revealedIds}
+            wrongIds={wrongIds}
+            onClick={clickFeature}
             onEnter={enterFeature}
             onLeave={leaveFeature}
             onMove={showTooltip}
           />
-          {tinyMarkersVisible ? (
+          {hintBox ? (
+            <rect
+              className="hint-box"
+              x={hintBox.x}
+              y={hintBox.y}
+              width={hintBox.width}
+              height={hintBox.height}
+            />
+          ) : null}
+          {effectiveTinyMarkersVisible ? (
             <TinyMarkers
               activeId={activeId}
+              clickable={clickable}
               guessed={guessed}
               markerData={tinyMarkerData}
               revealed={revealed}
+              revealedIds={revealedIds}
+              wrongIds={wrongIds}
               zoomScale={zoomScale}
+              onClick={clickFeature}
               onEnter={enterFeature}
               onLeave={leaveFeature}
               onMove={showTooltip}
             />
           ) : null}
+          <WrongFlashOverlay item={wrongFlashItem} zoomScale={zoomScale} />
         </g>
       </svg>
 
@@ -558,14 +839,14 @@ function QuizMap({
         <button
           type="button"
           className={
-            hasTinyMarkers && tinyMarkersVisible
+            hasTinyMarkers && effectiveTinyMarkersVisible
               ? "detail-toggle is-active"
               : "detail-toggle"
           }
           title={tinyMarkerToggleLabel}
           aria-label={tinyMarkerToggleLabel}
-          aria-pressed={hasTinyMarkers && tinyMarkersVisible}
-          disabled={!hasTinyMarkers}
+          aria-pressed={hasTinyMarkers && effectiveTinyMarkersVisible}
+          disabled={!hasTinyMarkers || forceTinyMarkers}
           onClick={() => setTinyMarkersVisible((current) => !current)}
         >
           <MapPin size={17} aria-hidden="true" />
@@ -574,6 +855,7 @@ function QuizMap({
 
       {tooltip ? (
         <div
+          key={`${tooltip.title}:${tooltip.meta}`}
           className="map-tooltip"
           style={{
             left: `${tooltip.x}px`,

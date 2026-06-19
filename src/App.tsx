@@ -1,15 +1,18 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
-  Download,
   Eye,
   Flag,
   Globe2,
   Info,
+  Keyboard,
+  Lightbulb,
   ListChecks,
+  MousePointer2,
   RotateCcw,
   Search,
   Share2,
+  SkipForward,
   Timer,
   X,
 } from "lucide-react";
@@ -31,12 +34,30 @@ import type { NativeName, Scope, SubdivisionFeature } from "./types";
 const DATA_URL = `${import.meta.env.BASE_URL}data/admin1.topo.json`;
 const COUNTRY_REGIONS_URL = `${import.meta.env.BASE_URL}data/country-regions.json`;
 const LAST_SCOPE_KEY = "subdivision-quiz:last-scope";
-const MODE_KEY = "subdivision-quiz:match-mode";
+const MATCH_MODE_KEY = "subdivision-quiz:match-mode";
+const QUIZ_MODE_KEY = "subdivision-quiz:quiz-mode";
 const HELP_CARD_KEY = "subdivision-quiz:help-dismissed:v2";
 const WIKIDATA_ENDPOINT = "https://www.wikidata.org/w/api.php";
 const WIKIDATA_BATCH_SIZE = 35;
 const NATIVE_NAME_CANDIDATE_LIMIT = 8;
 const NATIVE_LABEL_FEATURE_LIMIT = 650;
+const MAX_FIND_HINTS = 3;
+
+type QuizMode = "type" | "find";
+
+type FindStats = {
+  hints: number;
+  reveals: number;
+  skips: number;
+  wrong: number;
+};
+
+const EMPTY_FIND_STATS: FindStats = {
+  hints: 0,
+  reveals: 0,
+  skips: 0,
+  wrong: 0,
+};
 
 function initialScope(): Scope {
   if (typeof window === "undefined") {
@@ -80,8 +101,37 @@ function formatDuration(milliseconds: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-function progressStorageKey(key: string) {
-  return `subdivision-quiz:progress:${key}`;
+function initialQuizMode(): QuizMode {
+  if (typeof window === "undefined") {
+    return "type";
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("mode") === "find") {
+    return "find";
+  }
+
+  return window.localStorage.getItem(QUIZ_MODE_KEY) === "find" ? "find" : "type";
+}
+
+function urlForScopeAndMode(scope: Scope, mode: QuizMode) {
+  const params = new URLSearchParams();
+
+  if (scope.kind === "country") {
+    params.set("country", scope.value);
+  } else if (scope.kind === "region") {
+    params.set("region", scope.value);
+  }
+
+  params.set("mode", mode);
+
+  return `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+}
+
+function progressStorageKey(key: string, mode: QuizMode) {
+  return mode === "type"
+    ? `subdivision-quiz:progress:${key}`
+    : `subdivision-quiz:find-progress:${key}`;
 }
 
 function initialHelpCardOpen() {
@@ -92,48 +142,64 @@ function initialHelpCardOpen() {
   return window.localStorage.getItem(HELP_CARD_KEY) !== "1";
 }
 
-function csvCell(value: string | number | undefined) {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
-}
-
-function downloadCsv(
-  label: string,
-  features: SubdivisionFeature[],
-  guessed: Set<string>,
-) {
-  const rows = [
-    ["status", "country", "type", "name", "local_names", "native_names", "code"]
-      .map(csvCell)
-      .join(","),
-    ...features.sort(byCountryThenName).map((feature) =>
-      [
-        guessed.has(feature.properties.id) ? "found" : "missing",
-        feature.properties.country,
-        feature.properties.typeEn,
-        feature.properties.name,
-        localNameText(feature),
-        nativeNameText(feature),
-        feature.properties.code,
-      ]
-        .map(csvCell)
-        .join(","),
-    ),
-  ];
-
-  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-subdivisions.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-}
-
 function localNameText(feature: SubdivisionFeature) {
   return feature.properties.localNames.join(" / ");
 }
 
 function nativeNameText(feature: SubdivisionFeature) {
   return feature.properties.nativeNames.map((nativeName) => nativeName.name).join(" / ");
+}
+
+function cloneFindStats(stats?: Partial<FindStats>) {
+  return {
+    ...EMPTY_FIND_STATS,
+    ...stats,
+  };
+}
+
+function featureShortName(feature: SubdivisionFeature) {
+  const local = localNameText(feature);
+  const native = nativeNameText(feature);
+  const secondary = [local, native].find(
+    (name) => name && normalizeGuess(name) !== normalizeGuess(feature.properties.name),
+  );
+
+  return secondary ? `${secondary} / ${feature.properties.name}` : feature.properties.name;
+}
+
+function promptNames(feature: SubdivisionFeature | undefined) {
+  if (!feature) {
+    return {
+      primary: "Loading...",
+      secondary: "Choose a subdivision on the map.",
+    };
+  }
+
+  const local = feature.properties.localNames[0];
+  const native = feature.properties.nativeNames[0]?.name;
+  const primary = native || local || feature.properties.name;
+  const secondary = [
+    feature.properties.name,
+    local,
+    native,
+    ...feature.properties.localNames.slice(1),
+    ...feature.properties.nativeNames.slice(1).map((nativeName) => nativeName.name),
+  ]
+    .filter((name): name is string => Boolean(name))
+    .filter((name, index, names) => {
+      const normalized = normalizeGuess(name);
+      return (
+        normalized !== normalizeGuess(primary) &&
+        names.findIndex((item) => normalizeGuess(item) === normalized) === index
+      );
+    })
+    .slice(0, 3)
+    .join(" / ");
+
+  return {
+    primary,
+    secondary: secondary || `${feature.properties.typeEn} in ${feature.properties.country}`,
+  };
 }
 
 function mergeNativeNames(
@@ -289,6 +355,7 @@ function LocalNameLine({ feature }: { feature: SubdivisionFeature }) {
 
 export default function App() {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const nativeNameAttemptedQidsRef = useRef<Set<string>>(new Set());
   const [allFeatures, setAllFeatures] = useState<SubdivisionFeature[]>([]);
   const [countryRegionLookup, setCountryRegionLookup] = useState<CountryRegionLookup>({});
   const [nativeNameLookup, setNativeNameLookup] = useState<Record<string, NativeName[]>>({});
@@ -301,12 +368,24 @@ export default function App() {
   const [notice, setNotice] = useState("Loading map data...");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [gaveUp, setGaveUp] = useState(false);
+  const [quizMode, setQuizMode] = useState<QuizMode>(initialQuizMode);
   const [matchMode, setMatchMode] = useState<"single" | "all">(() => {
     if (typeof window === "undefined") {
       return "single";
     }
-    return window.localStorage.getItem(MODE_KEY) === "all" ? "all" : "single";
+    return window.localStorage.getItem(MATCH_MODE_KEY) === "all" ? "all" : "single";
   });
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
+  const [findStats, setFindStats] = useState<FindStats>(EMPTY_FIND_STATS);
+  const [findTargetId, setFindTargetId] = useState<string | null>(null);
+  const [findWrongIds, setFindWrongIds] = useState<string[]>([]);
+  const [wrongFlashId, setWrongFlashId] = useState<string | null>(null);
+  const [mapFocusRequest, setMapFocusRequest] = useState<{
+    id: string;
+    nonce: number;
+  } | null>(null);
+  const [findDeferredIds, setFindDeferredIds] = useState<Set<string>>(new Set());
+  const [hintLevel, setHintLevel] = useState(0);
   const [progressReady, setProgressReady] = useState(false);
   const [progressKey, setProgressKey] = useState<string | null>(null);
   const [showHelpCard, setShowHelpCard] = useState(initialHelpCardOpen);
@@ -373,8 +452,16 @@ export default function App() {
   );
   const activeNameIndex = useMemo(() => buildNameIndex(activeFeatures), [activeFeatures]);
   const key = scopeKey(scope);
+  const currentProgressKey = progressStorageKey(key, quizMode);
   const label = scopeLabel(scope, countries);
   const total = activeFeatures.length;
+  const completedIds = useMemo(() => {
+    if (quizMode === "type") {
+      return guessed;
+    }
+
+    return new Set([...guessed, ...revealedIds]);
+  }, [guessed, quizMode, revealedIds]);
   const foundFeatures = useMemo(
     () =>
       activeFeatures
@@ -385,13 +472,48 @@ export default function App() {
   const missingFeatures = useMemo(
     () =>
       activeFeatures
-        .filter((feature) => !guessed.has(feature.properties.id))
+        .filter((feature) => !completedIds.has(feature.properties.id))
         .sort(byCountryThenName),
-    [activeFeatures, guessed],
+    [activeFeatures, completedIds],
   );
-  const complete = total > 0 && guessed.size >= total;
-  const percent = total ? Math.round((guessed.size / total) * 1000) / 10 : 0;
+  const revealedFeatures = useMemo(
+    () =>
+      activeFeatures
+        .filter((feature) => revealedIds.has(feature.properties.id))
+        .sort(byCountryThenName),
+    [activeFeatures, revealedIds],
+  );
+  const completedReviewFeatures = useMemo(
+    () =>
+      quizMode === "find"
+        ? [...foundFeatures, ...revealedFeatures].sort(byCountryThenName)
+        : foundFeatures,
+    [foundFeatures, quizMode, revealedFeatures],
+  );
+  const currentTarget = useMemo(
+    () =>
+      findTargetId
+        ? activeFeatures.find((feature) => feature.properties.id === findTargetId)
+        : undefined,
+    [activeFeatures, findTargetId],
+  );
+  const wrongClickFeatures = useMemo(
+    () =>
+      findWrongIds
+        .map((id) => activeFeatures.find((feature) => feature.properties.id === id))
+        .filter((feature): feature is SubdivisionFeature => Boolean(feature)),
+    [activeFeatures, findWrongIds],
+  );
+  const wrongIdSet = useMemo(() => new Set(findWrongIds), [findWrongIds]);
+  const prompt = promptNames(currentTarget);
+  const complete = total > 0 && completedIds.size >= total;
+  const percent = total ? Math.round((completedIds.size / total) * 1000) / 10 : 0;
   const elapsed = startedAt ? now - startedAt : 0;
+  const visibleNotice = complete
+    ? "Complete. Every visible subdivision is completed."
+    : nativeNamesLoading
+      ? `Loading native names for ${label}...`
+      : notice;
   const sourceSupplementalNameCount = useMemo(
     () =>
       scopedFeatures.filter(
@@ -406,18 +528,33 @@ export default function App() {
   }, [scope]);
 
   useEffect(() => {
-    window.localStorage.setItem(MODE_KEY, matchMode);
+    const nextUrl = urlForScopeAndMode(scope, quizMode);
+    const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+  }, [quizMode, scope]);
+
+  useEffect(() => {
+    window.localStorage.setItem(QUIZ_MODE_KEY, quizMode);
+  }, [quizMode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(MATCH_MODE_KEY, matchMode);
   }, [matchMode]);
 
   useEffect(() => {
     if (total) {
       setNotice(
         sourceSupplementalNameCount
-          ? `Ready for ${label}.`
+          ? quizMode === "find"
+            ? `Find mode ready for ${label}.`
+            : `Ready for ${label}.`
           : `Ready for ${label}. No local or native names are available in the source data.`,
       );
     }
-  }, [key, label, sourceSupplementalNameCount, total]);
+  }, [key, label, quizMode, sourceSupplementalNameCount, total]);
 
   useEffect(() => {
     if (
@@ -429,25 +566,33 @@ export default function App() {
       return undefined;
     }
 
-    const needsNativeLabels = scopedFeatures.some((feature) => {
+    const featuresNeedingNativeLabels = scopedFeatures.filter((feature) => {
       const qid = feature.properties.wikidataId;
       const languages = countryRegionLookup[feature.properties.countryCode]?.languageCodes || [];
       return Boolean(
         qid &&
           languages.length &&
           !feature.properties.nativeNames.length &&
-          !nativeNameLookup[qid],
+          !nativeNameLookup[qid] &&
+          !nativeNameAttemptedQidsRef.current.has(qid),
       );
     });
 
-    if (!needsNativeLabels) {
+    if (!featuresNeedingNativeLabels.length) {
       return undefined;
     }
 
     let cancelled = false;
+    let settled = false;
+    const requestedQids = featuresNeedingNativeLabels
+      .map((feature) => feature.properties.wikidataId)
+      .filter((qid): qid is string => Boolean(qid));
+    for (const qid of requestedQids) {
+      nativeNameAttemptedQidsRef.current.add(qid);
+    }
     setNativeNamesLoading(true);
 
-    fetchNativeNamesForFeatures(scopedFeatures, countryRegionLookup)
+    fetchNativeNamesForFeatures(featuresNeedingNativeLabels, countryRegionLookup)
       .then((labels) => {
         if (cancelled) {
           return;
@@ -468,6 +613,7 @@ export default function App() {
         }
       })
       .finally(() => {
+        settled = true;
         if (!cancelled) {
           setNativeNamesLoading(false);
         }
@@ -475,6 +621,11 @@ export default function App() {
 
     return () => {
       cancelled = true;
+      if (!settled) {
+        for (const qid of requestedQids) {
+          nativeNameAttemptedQidsRef.current.delete(qid);
+        }
+      }
     };
   }, [countryRegionLookup, key, label, nativeNameLookup, scope.kind, scopedFeatures]);
 
@@ -485,31 +636,81 @@ export default function App() {
     setRecent([]);
     setActiveId(null);
     setQuery("");
+    setRevealedIds(new Set());
+    setFindStats(EMPTY_FIND_STATS);
+    setFindTargetId(null);
+    setFindWrongIds([]);
+    setWrongFlashId(null);
+    setMapFocusRequest(null);
+    setFindDeferredIds(new Set());
+    setHintLevel(0);
 
     try {
-      const raw = window.localStorage.getItem(progressStorageKey(key));
-      const saved = raw ? (JSON.parse(raw) as string[]) : [];
-      setGuessed(new Set(saved));
-      setStartedAt(saved.length ? Date.now() : null);
+      const raw = window.localStorage.getItem(currentProgressKey);
+      const saved = raw ? JSON.parse(raw) : quizMode === "type" ? [] : {};
+
+      if (quizMode === "type") {
+        const typedProgress = Array.isArray(saved) ? (saved as string[]) : [];
+        setGuessed(new Set(typedProgress));
+        setStartedAt(typedProgress.length ? Date.now() : null);
+      } else {
+        const findProgress = saved as {
+          correct?: string[];
+          revealed?: string[];
+          stats?: Partial<FindStats>;
+        };
+        const correct = Array.isArray(findProgress.correct) ? findProgress.correct : [];
+        const revealed = Array.isArray(findProgress.revealed) ? findProgress.revealed : [];
+        const stats = cloneFindStats(findProgress.stats);
+        setGuessed(new Set(correct));
+        setRevealedIds(new Set(revealed));
+        setFindStats(stats);
+        setStartedAt(
+          correct.length ||
+            revealed.length ||
+            stats.wrong ||
+            stats.hints ||
+            stats.reveals ||
+            stats.skips
+            ? Date.now()
+            : null,
+        );
+      }
     } catch {
       setGuessed(new Set());
+      setRevealedIds(new Set());
+      setFindStats(EMPTY_FIND_STATS);
       setStartedAt(null);
     }
 
-    setProgressKey(key);
+    setProgressKey(currentProgressKey);
     setProgressReady(true);
-  }, [key]);
+  }, [currentProgressKey, quizMode]);
 
   useEffect(() => {
-    if (!progressReady || progressKey !== key) {
+    if (!progressReady || progressKey !== currentProgressKey) {
       return;
     }
 
-    window.localStorage.setItem(
-      progressStorageKey(key),
-      JSON.stringify([...guessed]),
-    );
-  }, [guessed, key, progressKey, progressReady]);
+    const payload =
+      quizMode === "type"
+        ? [...guessed]
+        : {
+            correct: [...guessed],
+            revealed: [...revealedIds],
+            stats: findStats,
+          };
+
+    window.localStorage.setItem(currentProgressKey, JSON.stringify(payload));
+  }, [
+    currentProgressKey,
+    findStats,
+    guessed,
+    progressKey,
+    progressReady,
+    quizMode,
+    revealedIds,
+  ]);
 
   useEffect(() => {
     if (!startedAt || complete) {
@@ -521,10 +722,59 @@ export default function App() {
   }, [startedAt, complete]);
 
   useEffect(() => {
-    if (window.matchMedia("(min-width: 720px)").matches) {
+    if (quizMode === "type" && window.matchMedia("(min-width: 720px)").matches) {
       inputRef.current?.focus();
     }
-  }, [key]);
+  }, [key, quizMode]);
+
+  useEffect(() => {
+    if (quizMode !== "find" || !activeFeatures.length || complete || gaveUp) {
+      if (quizMode !== "find") {
+        setFindTargetId(null);
+      }
+      return;
+    }
+
+    const targetIsValid =
+      findTargetId &&
+      activeFeatures.some((feature) => feature.properties.id === findTargetId) &&
+      !completedIds.has(findTargetId);
+
+    if (targetIsValid) {
+      return;
+    }
+
+    const remaining = activeFeatures.filter(
+      (feature) => !completedIds.has(feature.properties.id),
+    );
+    if (!remaining.length) {
+      setFindTargetId(null);
+      return;
+    }
+
+    const available = remaining.filter(
+      (feature) => !findDeferredIds.has(feature.properties.id),
+    );
+    const pool = available.length ? available : remaining;
+    if (!available.length && findDeferredIds.size) {
+      setFindDeferredIds(new Set());
+    }
+
+    const next = pool[Math.floor(Math.random() * pool.length)];
+    setFindTargetId(next.properties.id);
+    setFindWrongIds([]);
+    setWrongFlashId(null);
+    setHintLevel(0);
+    setActiveId(null);
+  }, [
+    activeFeatures,
+    complete,
+    completedIds,
+    findDeferredIds,
+    findTargetId,
+    gaveUp,
+    quizMode,
+  ]);
 
   function addGuesses(matches: SubdivisionFeature[], message?: string) {
     const unseen = matches.filter((feature) => !guessed.has(feature.properties.id));
@@ -605,8 +855,146 @@ export default function App() {
     tryGuess(query);
   }
 
+  function startQuizTimer() {
+    if (!startedAt) {
+      setStartedAt(Date.now());
+    }
+  }
+
+  function completeFindTarget(feature: SubdivisionFeature, result: "correct" | "revealed") {
+    startQuizTimer();
+    if (result === "correct") {
+      setGuessed((current) => {
+        const next = new Set(current);
+        next.add(feature.properties.id);
+        return next;
+      });
+    } else {
+      setRevealedIds((current) => {
+        const next = new Set(current);
+        next.add(feature.properties.id);
+        return next;
+      });
+    }
+
+    setFindDeferredIds((current) => {
+      const next = new Set(current);
+      next.delete(feature.properties.id);
+      return next;
+    });
+    setRecent((current) => [feature, ...current].slice(0, 12));
+    setActiveId(feature.properties.id);
+    setFindWrongIds([]);
+    setHintLevel(0);
+    setFindTargetId(null);
+    setNotice(
+      result === "correct"
+        ? `Correct: ${featureShortName(feature)}.`
+        : `Revealed: ${featureShortName(feature)}.`,
+    );
+  }
+
+  function handleFeatureClick(feature: SubdivisionFeature) {
+    if (quizMode !== "find" || !currentTarget || complete || gaveUp) {
+      return;
+    }
+
+    startQuizTimer();
+
+    if (completedIds.has(feature.properties.id)) {
+      setActiveId(feature.properties.id);
+      setNotice(`Already completed: ${featureShortName(feature)}.`);
+      return;
+    }
+
+    if (feature.properties.id === currentTarget.properties.id) {
+      completeFindTarget(feature, "correct");
+      return;
+    }
+
+    setFindStats((current) => ({
+      ...current,
+      wrong: current.wrong + 1,
+    }));
+    setFindWrongIds((current) =>
+      current.includes(feature.properties.id)
+        ? current
+        : [feature.properties.id, ...current].slice(0, 8),
+    );
+    setWrongFlashId(null);
+    window.setTimeout(() => setWrongFlashId(feature.properties.id), 0);
+    setActiveId(feature.properties.id);
+    setNotice(`That was ${featureShortName(feature)}. Try again.`);
+  }
+
+  function requestHint() {
+    if (quizMode !== "find" || !currentTarget || complete || gaveUp) {
+      return;
+    }
+
+    startQuizTimer();
+    if (hintLevel >= MAX_FIND_HINTS) {
+      setNotice("The search area is as tight as it gets. Reveal is available.");
+      return;
+    }
+
+    const nextHintLevel = hintLevel + 1;
+    setHintLevel(nextHintLevel);
+    setFindStats((current) => ({
+      ...current,
+      hints: current.hints + 1,
+    }));
+    setNotice(
+      nextHintLevel === MAX_FIND_HINTS
+        ? "Final hint: the answer is inside the small outline."
+        : "Hint added: the answer is inside the outline.",
+    );
+  }
+
+  function revealFindTarget() {
+    if (quizMode !== "find" || !currentTarget || complete || gaveUp) {
+      return;
+    }
+
+    setFindStats((current) => ({
+      ...current,
+      reveals: current.reveals + 1,
+    }));
+    setMapFocusRequest({
+      id: currentTarget.properties.id,
+      nonce: Date.now(),
+    });
+    completeFindTarget(currentTarget, "revealed");
+  }
+
+  function skipFindTarget() {
+    if (quizMode !== "find" || !currentTarget || complete || gaveUp) {
+      return;
+    }
+
+    startQuizTimer();
+    setFindStats((current) => ({
+      ...current,
+      skips: current.skips + 1,
+    }));
+    setFindDeferredIds((current) => {
+      const next = new Set(current);
+      next.add(currentTarget.properties.id);
+      return next;
+    });
+    setFindWrongIds([]);
+    setWrongFlashId(null);
+    setHintLevel(0);
+    setFindTargetId(null);
+    setActiveId(null);
+    setNotice("Skipped for now. It can come back later.");
+  }
+
   async function shareResult() {
-    const text = `I named ${guessed.size.toLocaleString()} of ${total.toLocaleString()} first-level subdivisions in ${label} (${percent}%).`;
+    const text =
+      quizMode === "find"
+        ? `I completed ${completedIds.size.toLocaleString()} of ${total.toLocaleString()} first-level subdivisions in ${label} (${percent}%). Correct clicks: ${guessed.size.toLocaleString()}; revealed: ${revealedIds.size.toLocaleString()}; wrong clicks: ${findStats.wrong.toLocaleString()}; hints: ${findStats.hints.toLocaleString()}.`
+        : `I named ${guessed.size.toLocaleString()} of ${total.toLocaleString()} first-level subdivisions in ${label} (${percent}%).`;
 
     try {
       await navigator.clipboard.writeText(text);
@@ -617,12 +1005,29 @@ export default function App() {
   }
 
   function restartQuiz() {
-    if (guessed.size && !window.confirm(`Restart the ${label} quiz?`)) {
+    const hasProgress =
+      quizMode === "find"
+        ? completedIds.size ||
+          findStats.wrong ||
+          findStats.hints ||
+          findStats.reveals ||
+          findStats.skips
+        : guessed.size;
+
+    if (hasProgress && !window.confirm(`Restart the ${label} quiz?`)) {
       return;
     }
 
-    window.localStorage.removeItem(progressStorageKey(key));
+    window.localStorage.removeItem(currentProgressKey);
     setGuessed(new Set());
+    setRevealedIds(new Set());
+    setFindStats(EMPTY_FIND_STATS);
+    setFindTargetId(null);
+    setFindWrongIds([]);
+    setWrongFlashId(null);
+    setMapFocusRequest(null);
+    setFindDeferredIds(new Set());
+    setHintLevel(0);
     setRecent([]);
     setGaveUp(false);
     setAmbiguous([]);
@@ -636,7 +1041,7 @@ export default function App() {
   function dismissHelpCard() {
     window.localStorage.setItem(HELP_CARD_KEY, "1");
     setShowHelpCard(false);
-    if (window.matchMedia("(min-width: 720px)").matches) {
+    if (quizMode === "type" && window.matchMedia("(min-width: 720px)").matches) {
       window.requestAnimationFrame(() => inputRef.current?.focus());
     }
   }
@@ -648,21 +1053,81 @@ export default function App() {
           <Globe2 size={28} aria-hidden="true" />
           <div>
             <h1>Subdivision Quiz</h1>
-            <p>How many first-level subdivisions can you name?</p>
+            <p>Name subdivisions or find them on the map.</p>
+          </div>
+        </div>
+
+        <div className="scope-strip header-scope-strip">
+          <button
+            type="button"
+            className={scope.kind === "world" ? "scope-button is-active" : "scope-button"}
+            onClick={() => setScope({ kind: "world", value: "world" })}
+          >
+            <Globe2 size={17} aria-hidden="true" />
+            World
+          </button>
+
+          <label className="select-control">
+            <span>Region</span>
+            <select
+              value={scope.kind === "region" ? scope.value : ""}
+              onChange={(event) => {
+                if (event.target.value) {
+                  setScope({ kind: "region", value: event.target.value });
+                }
+              }}
+            >
+              <option value="">Choose region</option>
+              {regions.map((region) => (
+                <option key={region.name} value={region.name}>
+                  {region.name} ({region.count})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="select-control country-select">
+            <span>Country</span>
+            <select
+              value={scope.kind === "country" ? scope.value : ""}
+              onChange={(event) => {
+                if (event.target.value) {
+                  setScope({ kind: "country", value: event.target.value });
+                }
+              }}
+            >
+              <option value="">Choose country</option>
+              {countries.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.name} ({country.count})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="quiz-mode-switch" role="group" aria-label="Quiz mode">
+            <button
+              type="button"
+              className={quizMode === "type" ? "is-active" : ""}
+              onClick={() => setQuizMode("type")}
+            >
+              <Keyboard size={17} aria-hidden="true" />
+              Type
+            </button>
+            <button
+              type="button"
+              className={quizMode === "find" ? "is-active" : ""}
+              onClick={() => setQuizMode("find")}
+            >
+              <MousePointer2 size={17} aria-hidden="true" />
+              Find
+            </button>
           </div>
         </div>
 
         <div className="top-actions">
           <button type="button" className="icon-button" title="Copy result" onClick={shareResult}>
             <Share2 size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className="icon-button"
-            title="Download CSV"
-            onClick={() => downloadCsv(label, activeFeatures, guessed)}
-          >
-            <Download size={18} aria-hidden="true" />
           </button>
           <button type="button" className="icon-button" title="Restart quiz" onClick={restartQuiz}>
             <RotateCcw size={18} aria-hidden="true" />
@@ -672,68 +1137,20 @@ export default function App() {
 
       <main className="workspace">
         <section className="play-area">
-          <div className="scope-strip">
-            <button
-              type="button"
-              className={scope.kind === "world" ? "scope-button is-active" : "scope-button"}
-              onClick={() => setScope({ kind: "world", value: "world" })}
-            >
-              <Globe2 size={17} aria-hidden="true" />
-              World
-            </button>
-
-            <label className="select-control">
-              <span>Region</span>
-              <select
-                value={scope.kind === "region" ? scope.value : ""}
-                onChange={(event) => {
-                  if (event.target.value) {
-                    setScope({ kind: "region", value: event.target.value });
-                  }
-                }}
-              >
-                <option value="">Choose region</option>
-                {regions.map((region) => (
-                  <option key={region.name} value={region.name}>
-                    {region.name} ({region.count})
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="select-control country-select">
-              <span>Country</span>
-              <select
-                value={scope.kind === "country" ? scope.value : ""}
-                onChange={(event) => {
-                  if (event.target.value) {
-                    setScope({ kind: "country", value: event.target.value });
-                  }
-                }}
-              >
-                <option value="">Choose country</option>
-                {countries.map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {country.name} ({country.count})
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
           {showHelpCard ? (
             <aside className="help-card" aria-label="How to play">
               <Info size={18} aria-hidden="true" />
               <div>
                 <strong>How to play</strong>
                 <p>
-                  Name the first-level subdivisions in the selected country, region, or
-                  the whole world.
+                  Pick a country, region, or the whole world, then choose how you want
+                  to play.
                 </p>
                 <ul>
-                  <li>Type an English, local, romanized, or native-script name.</li>
-                  <li>Answers are accepted as soon as they exactly match a known name.</li>
-                  <li>If one name belongs to multiple places, choose one or add them all.</li>
+                  <li>Type mode accepts English, local, romanized, or native-script names.</li>
+                  <li>Find mode gives you a name and asks you to click the territory.</li>
+                  <li>Wrong clicks reveal what you clicked and count against accuracy.</li>
+                  <li>Hints draw a shrinking search area without centering the answer.</li>
                   <li>Your progress saves automatically; Reset starts this quiz over.</li>
                 </ul>
               </div>
@@ -762,15 +1179,29 @@ export default function App() {
                     } countries`}
               </span>
             </div>
-            <div className="metric-row">
+            <div className={quizMode === "find" ? "metric-row is-find-mode" : "metric-row"}>
               <div>
-                <strong>{guessed.size.toLocaleString()}</strong>
-                <span>found</span>
+                <strong>
+                  {(quizMode === "find" ? completedIds.size : guessed.size).toLocaleString()}
+                </strong>
+                <span>{quizMode === "find" ? "done" : "found"}</span>
               </div>
               <div>
                 <strong>{missingFeatures.length.toLocaleString()}</strong>
                 <span>left</span>
               </div>
+              {quizMode === "find" ? (
+                <>
+                  <div>
+                    <strong>{findStats.wrong.toLocaleString()}</strong>
+                    <span>wrong</span>
+                  </div>
+                  <div>
+                    <strong>{findStats.hints.toLocaleString()}</strong>
+                    <span>hints</span>
+                  </div>
+                </>
+              ) : null}
               <div>
                 <strong>{formatDuration(elapsed)}</strong>
                 <span>time</span>
@@ -782,79 +1213,126 @@ export default function App() {
             <div style={{ width: `${percent}%` }} />
           </div>
 
-          <div className="quiz-bar">
-            <form className="guess-form" onSubmit={submitGuess}>
-              <Search size={18} aria-hidden="true" />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(event) => handleQueryChange(event.target.value)}
-                placeholder="Type a subdivision"
-                autoComplete="off"
-              />
-              <button type="submit">
-                <Check size={17} aria-hidden="true" />
-                Enter
-              </button>
-            </form>
+          <div className={quizMode === "find" ? "quiz-bar is-find-mode" : "quiz-bar"}>
+            {quizMode === "type" ? (
+              <>
+                <form className="guess-form" onSubmit={submitGuess}>
+                  <Search size={18} aria-hidden="true" />
+                  <input
+                    ref={inputRef}
+                    value={query}
+                    onChange={(event) => handleQueryChange(event.target.value)}
+                    placeholder="Type a subdivision"
+                    autoComplete="off"
+                  />
+                  <button type="submit">
+                    <Check size={17} aria-hidden="true" />
+                    Enter
+                  </button>
+                </form>
 
-            <div className="mode-row" role="group" aria-label="Duplicate answer mode">
-              <button
-                type="button"
-                className={matchMode === "single" ? "is-active" : ""}
-                onClick={() => setMatchMode("single")}
-              >
-                One
-              </button>
-              <button
-                type="button"
-                className={matchMode === "all" ? "is-active" : ""}
-                onClick={() => setMatchMode("all")}
-              >
-                All matches
-              </button>
-            </div>
+                <div className="mode-row" role="group" aria-label="Duplicate answer mode">
+                  <button
+                    type="button"
+                    className={matchMode === "single" ? "is-active" : ""}
+                    onClick={() => setMatchMode("single")}
+                  >
+                    One
+                  </button>
+                  <button
+                    type="button"
+                    className={matchMode === "all" ? "is-active" : ""}
+                    onClick={() => setMatchMode("all")}
+                  >
+                    All matches
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="find-prompt" aria-live="polite">
+                <MousePointer2 size={20} aria-hidden="true" />
+                <div>
+                  <span className="prompt-label">Find this subdivision</span>
+                  <strong>{complete ? "Complete" : prompt.primary}</strong>
+                  <span>{complete ? "Every subdivision in this quiz is completed." : prompt.secondary}</span>
+                </div>
+              </div>
+            )}
 
             <div className="notice" aria-live="polite">
-              {complete
-                ? "Complete. Every visible subdivision is found."
-                : nativeNamesLoading
-                  ? `${notice} Loading native names...`
-                  : notice}
+              {visibleNotice}
             </div>
 
-            <div className="panel-actions">
-              <button
-                type="button"
-                className="danger-action"
-                onClick={() => setGaveUp(true)}
-                disabled={gaveUp || complete}
-              >
-                <Flag size={17} aria-hidden="true" />
-                Give up
-              </button>
-              <button
-                type="button"
-                className="reset-action"
-                onClick={restartQuiz}
-                disabled={!guessed.size && !gaveUp}
-              >
-                <RotateCcw size={17} aria-hidden="true" />
-                Reset
-              </button>
-              <button
-                type="button"
-                className="download-action"
-                onClick={() => downloadCsv(label, activeFeatures, guessed)}
-                disabled={!total}
-              >
-                <Download size={17} aria-hidden="true" />
-                CSV
-              </button>
-            </div>
+            {quizMode === "type" ? (
+              <div className="panel-actions">
+                <button
+                  type="button"
+                  className="danger-action"
+                  onClick={() => setGaveUp(true)}
+                  disabled={gaveUp || complete}
+                >
+                  <Flag size={17} aria-hidden="true" />
+                  Give up
+                </button>
+                <button
+                  type="button"
+                  className="reset-action"
+                  onClick={restartQuiz}
+                  disabled={!guessed.size && !gaveUp}
+                >
+                  <RotateCcw size={17} aria-hidden="true" />
+                  Reset
+                </button>
+              </div>
+            ) : (
+              <div className="panel-actions find-actions">
+                <button
+                  type="button"
+                  className="hint-action"
+                  onClick={requestHint}
+                  disabled={!currentTarget || complete || hintLevel >= MAX_FIND_HINTS}
+                >
+                  <Lightbulb size={17} aria-hidden="true" />
+                  Hint
+                </button>
+                <button
+                  type="button"
+                  className="reveal-action"
+                  onClick={revealFindTarget}
+                  disabled={!currentTarget || complete}
+                >
+                  <Eye size={17} aria-hidden="true" />
+                  Reveal
+                </button>
+                <button
+                  type="button"
+                  className="skip-action"
+                  onClick={skipFindTarget}
+                  disabled={!currentTarget || complete}
+                >
+                  <SkipForward size={17} aria-hidden="true" />
+                  Skip
+                </button>
+                <button
+                  type="button"
+                  className="reset-action"
+                  onClick={restartQuiz}
+                  disabled={
+                    !completedIds.size &&
+                    !findStats.wrong &&
+                    !findStats.hints &&
+                    !findStats.reveals &&
+                    !findStats.skips
+                  }
+                >
+                  <RotateCcw size={17} aria-hidden="true" />
+                  Reset
+                </button>
+              </div>
+            )}
           </div>
 
-          {ambiguous.length ? (
+          {quizMode === "type" && ambiguous.length ? (
             <div className="resolver map-resolver">
               <div className="resolver-heading">
                 <strong>{ambiguous[0].properties.name}</strong>
@@ -890,14 +1368,62 @@ export default function App() {
               features={activeFeatures}
               guessed={guessed}
               revealed={gaveUp || complete}
+              revealedIds={revealedIds}
+              wrongIds={wrongIdSet}
+              wrongFlashId={wrongFlashId}
               activeId={activeId}
               scope={scope}
+              clickable={quizMode === "find" && !complete && !gaveUp}
+              forceTinyMarkers={quizMode === "find"}
+              currentTargetId={currentTarget?.properties.id || null}
+              focusFeatureId={mapFocusRequest?.id || null}
+              focusRequestNonce={mapFocusRequest?.nonce || 0}
+              hintLevel={hintLevel}
               onHover={setActiveId}
+              onFeatureClick={handleFeatureClick}
             />
           )}
         </section>
 
         <aside className="side-panel">
+          {quizMode === "find" ? (
+            <section className="answer-section find-side-card">
+              <div className="section-title">
+                <MousePointer2 size={18} aria-hidden="true" />
+                <h3>Current Target</h3>
+              </div>
+              <div className="find-target-card">
+                <span className="prompt-label">Find</span>
+                <strong>{complete ? "Complete" : prompt.primary}</strong>
+                <span>
+                  {complete ? "Every subdivision in this quiz is completed." : prompt.secondary}
+                </span>
+              </div>
+              <div className="find-tried-list">
+                <strong>Tried clicks</strong>
+                {wrongClickFeatures.length ? (
+                  <div className="answer-list compact">
+                    {wrongClickFeatures.map((feature) => (
+                      <button
+                        key={feature.properties.id}
+                        type="button"
+                        onMouseEnter={() => setActiveId(feature.properties.id)}
+                        onFocus={() => setActiveId(feature.properties.id)}
+                      >
+                        <strong>{feature.properties.name}</strong>
+                        <LocalNameLine feature={feature} />
+                        <NativeNameLine feature={feature} />
+                        <span>{feature.properties.country}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No wrong clicks for this target.</p>
+                )}
+              </div>
+            </section>
+          ) : null}
+
           <section className="answer-section">
             <div className="section-title">
               <ListChecks size={18} aria-hidden="true" />
@@ -927,10 +1453,18 @@ export default function App() {
           <section className="answer-section">
             <div className="section-title">
               <Eye size={18} aria-hidden="true" />
-              <h3>{gaveUp || complete ? "Missing" : "Found"}</h3>
+              <h3>
+                {gaveUp
+                  ? "Missing"
+                  : quizMode === "find"
+                    ? "Completed"
+                    : complete
+                      ? "Missing"
+                      : "Found"}
+              </h3>
             </div>
             <div className="answer-list">
-              {gaveUp || complete ? (
+              {gaveUp || (quizMode === "type" && complete) ? (
                 missingFeatures.slice(0, 120).map((feature) => (
                   <button
                     key={feature.properties.id}
@@ -944,8 +1478,8 @@ export default function App() {
                     <span>{feature.properties.country}</span>
                   </button>
                 ))
-              ) : foundFeatures.length ? (
-                foundFeatures.slice(0, 120).map((feature) => (
+              ) : completedReviewFeatures.length ? (
+                completedReviewFeatures.slice(0, 120).map((feature) => (
                   <button
                     key={feature.properties.id}
                     type="button"
@@ -959,7 +1493,7 @@ export default function App() {
                   </button>
                 ))
               ) : (
-                <p>Found answers appear here.</p>
+                <p>{quizMode === "find" ? "Completed territories appear here." : "Found answers appear here."}</p>
               )}
             </div>
           </section>
