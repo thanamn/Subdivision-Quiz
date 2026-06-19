@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import {
   Check,
   Eye,
@@ -42,6 +43,32 @@ const WIKIDATA_BATCH_SIZE = 35;
 const NATIVE_NAME_CANDIDATE_LIMIT = 8;
 const NATIVE_LABEL_FEATURE_LIMIT = 650;
 const MAX_FIND_HINTS = 3;
+const CONFETTI_COLORS = [
+  "#0f8b8d",
+  "#e05d41",
+  "#c48a1b",
+  "#2670a8",
+  "#bd4b73",
+  "#6c9a3f",
+  "#7a5c99",
+];
+const CONFETTI_PIECES = Array.from({ length: 72 }, (_, index) => {
+  const size = 6 + (index % 4) * 2;
+  const isWide = index % 5 === 0;
+
+  return {
+    color: CONFETTI_COLORS[index % CONFETTI_COLORS.length],
+    delay: (index % 12) * 0.045,
+    drift: ((index * 23) % 141) - 70,
+    duration: 1.65 + (index % 7) * 0.09,
+    id: index,
+    isRound: index % 7 === 0,
+    left: (index * 37 + 11) % 100,
+    rotate: ((index * 47) % 360) - 180,
+    height: isWide ? size : size + 5,
+    width: isWide ? size + 6 : size,
+  };
+});
 
 type QuizMode = "type" | "find";
 
@@ -50,6 +77,12 @@ type FindStats = {
   reveals: number;
   skips: number;
   wrong: number;
+};
+
+type CompletionState = {
+  progressKey: string | null;
+  ready: boolean;
+  wasComplete: boolean;
 };
 
 const EMPTY_FIND_STATS: FindStats = {
@@ -200,6 +233,10 @@ function promptNames(feature: SubdivisionFeature | undefined) {
     primary,
     secondary: secondary || `${feature.properties.typeEn} in ${feature.properties.country}`,
   };
+}
+
+function countryOptionText(country: { count: number; name: string }) {
+  return `${country.name} (${country.count.toLocaleString()})`;
 }
 
 function mergeNativeNames(
@@ -353,8 +390,42 @@ function LocalNameLine({ feature }: { feature: SubdivisionFeature }) {
   return text ? <span className="local-name">{text}</span> : null;
 }
 
+function CompletionConfetti({ run }: { run: number }) {
+  if (!run) {
+    return null;
+  }
+
+  return (
+    <div key={run} className="completion-confetti" aria-hidden="true">
+      {CONFETTI_PIECES.map((piece) => (
+        <span
+          key={piece.id}
+          className={piece.isRound ? "confetti-piece is-round" : "confetti-piece"}
+          style={
+            {
+              "--confetti-color": piece.color,
+              "--confetti-delay": `${piece.delay}s`,
+              "--confetti-drift": `${piece.drift}px`,
+              "--confetti-duration": `${piece.duration}s`,
+              "--confetti-height": `${piece.height}px`,
+              "--confetti-left": `${piece.left}%`,
+              "--confetti-rotate": `${piece.rotate}deg`,
+              "--confetti-width": `${piece.width}px`,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const completionStateRef = useRef<CompletionState>({
+    progressKey: null,
+    ready: false,
+    wasComplete: false,
+  });
   const nativeNameAttemptedQidsRef = useRef<Set<string>>(new Set());
   const [allFeatures, setAllFeatures] = useState<SubdivisionFeature[]>([]);
   const [countryRegionLookup, setCountryRegionLookup] = useState<CountryRegionLookup>({});
@@ -368,6 +439,9 @@ export default function App() {
   const [notice, setNotice] = useState("Loading map data...");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [gaveUp, setGaveUp] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+  const [countrySearchOpen, setCountrySearchOpen] = useState(false);
+  const [countryHighlightIndex, setCountryHighlightIndex] = useState(0);
   const [quizMode, setQuizMode] = useState<QuizMode>(initialQuizMode);
   const [matchMode, setMatchMode] = useState<"single" | "all">(() => {
     if (typeof window === "undefined") {
@@ -392,6 +466,7 @@ export default function App() {
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [confettiRun, setConfettiRun] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -454,6 +529,28 @@ export default function App() {
   const key = scopeKey(scope);
   const currentProgressKey = progressStorageKey(key, quizMode);
   const label = scopeLabel(scope, countries);
+  const selectedCountry = useMemo(
+    () =>
+      scope.kind === "country"
+        ? countries.find((country) => country.code === scope.value)
+        : undefined,
+    [countries, scope],
+  );
+  const countrySearchTerm = normalizeGuess(countrySearch);
+  const filteredCountries = useMemo(() => {
+    const matches = countrySearchTerm
+      ? countries.filter((country) => {
+          const normalizedName = normalizeGuess(country.name);
+          const normalizedCode = normalizeGuess(country.code);
+          return (
+            normalizedName.includes(countrySearchTerm) ||
+            normalizedCode === countrySearchTerm
+          );
+        })
+      : countries;
+
+    return matches.slice(0, 16);
+  }, [countries, countrySearchTerm]);
   const total = activeFeatures.length;
   const completedIds = useMemo(() => {
     if (quizMode === "type") {
@@ -543,6 +640,15 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(MATCH_MODE_KEY, matchMode);
   }, [matchMode]);
+
+  useEffect(() => {
+    setCountrySearch(selectedCountry?.name || "");
+    setCountryHighlightIndex(0);
+  }, [selectedCountry]);
+
+  useEffect(() => {
+    setCountryHighlightIndex(0);
+  }, [countrySearchTerm]);
 
   useEffect(() => {
     if (total) {
@@ -720,6 +826,38 @@ export default function App() {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [startedAt, complete]);
+
+  useEffect(() => {
+    if (!progressReady || progressKey !== currentProgressKey || !total) {
+      completionStateRef.current = {
+        progressKey: currentProgressKey,
+        ready: false,
+        wasComplete: complete,
+      };
+      return;
+    }
+
+    const previous = completionStateRef.current;
+
+    if (previous.progressKey !== currentProgressKey || !previous.ready) {
+      completionStateRef.current = {
+        progressKey: currentProgressKey,
+        ready: true,
+        wasComplete: complete,
+      };
+      return;
+    }
+
+    if (complete && !previous.wasComplete && !gaveUp) {
+      setConfettiRun((current) => current + 1);
+    }
+
+    completionStateRef.current = {
+      progressKey: currentProgressKey,
+      ready: true,
+      wasComplete: complete,
+    };
+  }, [complete, currentProgressKey, gaveUp, progressKey, progressReady, total]);
 
   useEffect(() => {
     if (quizMode === "type" && window.matchMedia("(min-width: 720px)").matches) {
@@ -1046,8 +1184,47 @@ export default function App() {
     }
   }
 
+  function selectCountry(country: { code: string; name: string }) {
+    setScope({ kind: "country", value: country.code });
+    setCountrySearch(country.name);
+    setCountrySearchOpen(false);
+    setCountryHighlightIndex(0);
+  }
+
+  function handleCountrySearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setCountrySearchOpen(true);
+      setCountryHighlightIndex((current) =>
+        filteredCountries.length ? Math.min(current + 1, filteredCountries.length - 1) : 0,
+      );
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setCountrySearchOpen(true);
+      setCountryHighlightIndex((current) => Math.max(current - 1, 0));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      if (filteredCountries.length) {
+        event.preventDefault();
+        selectCountry(filteredCountries[countryHighlightIndex] || filteredCountries[0]);
+      }
+      return;
+    }
+
+    if (event.key === "Escape") {
+      setCountrySearchOpen(false);
+    }
+  }
+
   return (
     <div className="app">
+      <CompletionConfetti run={confettiRun} />
+
       <header className="topbar">
         <div className="brand">
           <Globe2 size={28} aria-hidden="true" />
@@ -1086,24 +1263,82 @@ export default function App() {
             </select>
           </label>
 
-          <label className="select-control country-select">
-            <span>Country</span>
-            <select
-              value={scope.kind === "country" ? scope.value : ""}
-              onChange={(event) => {
-                if (event.target.value) {
-                  setScope({ kind: "country", value: event.target.value });
+          <div
+            className="select-control country-select country-combobox"
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setCountrySearchOpen(false);
+              }
+            }}
+          >
+            <label htmlFor="country-search">Country</label>
+            <div className="country-search-box">
+              <Search className="country-search-icon" size={16} aria-hidden="true" />
+              <input
+                id="country-search"
+                className="country-search-input"
+                value={countrySearch}
+                placeholder="Search country"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-controls="country-search-results"
+                aria-expanded={countrySearchOpen}
+                aria-activedescendant={
+                  countrySearchOpen && filteredCountries[countryHighlightIndex]
+                    ? `country-option-${filteredCountries[countryHighlightIndex].code}`
+                    : undefined
                 }
-              }}
-            >
-              <option value="">Choose country</option>
-              {countries.map((country) => (
-                <option key={country.code} value={country.code}>
-                  {country.name} ({country.count})
-                </option>
-              ))}
-            </select>
-          </label>
+                autoComplete="off"
+                onChange={(event) => {
+                  setCountrySearch(event.target.value);
+                  setCountrySearchOpen(true);
+                }}
+                onFocus={(event) => {
+                  event.currentTarget.select();
+                  setCountrySearchOpen(true);
+                }}
+                onKeyDown={handleCountrySearchKeyDown}
+              />
+              {countrySearchOpen ? (
+                <div
+                  id="country-search-results"
+                  className="country-search-results"
+                  role="listbox"
+                  aria-label="Country results"
+                >
+                  {filteredCountries.length ? (
+                    filteredCountries.map((country, index) => (
+                      <button
+                        id={`country-option-${country.code}`}
+                        key={country.code}
+                        type="button"
+                        className={
+                          index === countryHighlightIndex
+                            ? "country-search-result is-active"
+                            : "country-search-result"
+                        }
+                        role="option"
+                        aria-selected={scope.kind === "country" && scope.value === country.code}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onMouseEnter={() => setCountryHighlightIndex(index)}
+                        onClick={() => selectCountry(country)}
+                      >
+                        <span>{country.name}</span>
+                        <small>{country.count.toLocaleString()}</small>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="country-search-empty">No countries found.</div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+            {selectedCountry ? (
+              <small className="country-search-current">
+                {countryOptionText(selectedCountry)}
+              </small>
+            ) : null}
+          </div>
 
           <div className="quiz-mode-switch" role="group" aria-label="Quiz mode">
             <button
