@@ -269,9 +269,20 @@ a {
   transform: translateY(-50%);
 }
 
+.country-search-chevron {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  color: #68777e;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
 .country-search-input {
   padding-left: 34px;
+  padding-right: 34px;
   font-weight: 600;
+  text-overflow: ellipsis;
 }
 
 .country-search-input:focus {
@@ -332,7 +343,6 @@ a {
   font-size: 0.78rem;
 }
 
-.country-search-current,
 .country-search-empty {
   color: #68777e;
   font-size: 0.78rem;

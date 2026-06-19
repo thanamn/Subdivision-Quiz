@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import {
+  ChevronDown,
   Check,
   Eye,
   Flag,
@@ -233,10 +234,6 @@ function promptNames(feature: SubdivisionFeature | undefined) {
     primary,
     secondary: secondary || `${feature.properties.typeEn} in ${feature.properties.country}`,
   };
-}
-
-function countryOptionText(country: { count: number; name: string }) {
-  return `${country.name} (${country.count.toLocaleString()})`;
 }
 
 function mergeNativeNames(
@@ -549,7 +546,7 @@ export default function App() {
         })
       : countries;
 
-    return matches.slice(0, 16);
+    return matches;
   }, [countries, countrySearchTerm]);
   const total = activeFeatures.length;
   const completedIds = useMemo(() => {
@@ -640,11 +637,6 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(MATCH_MODE_KEY, matchMode);
   }, [matchMode]);
-
-  useEffect(() => {
-    setCountrySearch(selectedCountry?.name || "");
-    setCountryHighlightIndex(0);
-  }, [selectedCountry]);
 
   useEffect(() => {
     setCountryHighlightIndex(0);
@@ -1186,7 +1178,7 @@ export default function App() {
 
   function selectCountry(country: { code: string; name: string }) {
     setScope({ kind: "country", value: country.code });
-    setCountrySearch(country.name);
+    setCountrySearch("");
     setCountrySearchOpen(false);
     setCountryHighlightIndex(0);
   }
@@ -1218,6 +1210,7 @@ export default function App() {
 
     if (event.key === "Escape") {
       setCountrySearchOpen(false);
+      setCountrySearch("");
     }
   }
 
@@ -1268,6 +1261,7 @@ export default function App() {
             onBlur={(event) => {
               if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
                 setCountrySearchOpen(false);
+                setCountrySearch("");
               }
             }}
           >
@@ -1278,7 +1272,11 @@ export default function App() {
                 id="country-search"
                 className="country-search-input"
                 value={countrySearch}
-                placeholder="Search country"
+                placeholder={
+                  countrySearchOpen
+                    ? "Type to narrow countries"
+                    : selectedCountry?.name || "Choose country"
+                }
                 role="combobox"
                 aria-autocomplete="list"
                 aria-controls="country-search-results"
@@ -1295,10 +1293,16 @@ export default function App() {
                 }}
                 onFocus={(event) => {
                   event.currentTarget.select();
+                  setCountrySearch("");
+                  setCountrySearchOpen(true);
+                }}
+                onClick={() => {
+                  setCountrySearch("");
                   setCountrySearchOpen(true);
                 }}
                 onKeyDown={handleCountrySearchKeyDown}
               />
+              <ChevronDown className="country-search-chevron" size={16} aria-hidden="true" />
               {countrySearchOpen ? (
                 <div
                   id="country-search-results"
@@ -1319,6 +1323,7 @@ export default function App() {
                         }
                         role="option"
                         aria-selected={scope.kind === "country" && scope.value === country.code}
+                        aria-label={`${country.name}, ${country.count.toLocaleString()} subdivisions`}
                         onMouseDown={(event) => event.preventDefault()}
                         onMouseEnter={() => setCountryHighlightIndex(index)}
                         onClick={() => selectCountry(country)}
@@ -1333,11 +1338,6 @@ export default function App() {
                 </div>
               ) : null}
             </div>
-            {selectedCountry ? (
-              <small className="country-search-current">
-                {countryOptionText(selectedCountry)}
-              </small>
-            ) : null}
           </div>
 
           <div className="quiz-mode-switch" role="group" aria-label="Quiz mode">
