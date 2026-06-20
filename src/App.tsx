@@ -618,6 +618,12 @@ export default function App() {
   const wrongIdSet = useMemo(() => new Set(findWrongIds), [findWrongIds]);
   const prompt = promptNames(currentTarget);
   const complete = total > 0 && completedIds.size >= total;
+  const findPromptTitle = gaveUp ? "Gave up" : complete ? "Complete" : prompt.primary;
+  const findPromptDetail = gaveUp
+    ? "The remaining subdivisions are revealed on the map and in Missing."
+    : complete
+      ? "Every subdivision in this quiz is completed."
+      : prompt.secondary;
   const percent = total ? Math.round((completedIds.size / total) * 1000) / 10 : 0;
   const elapsed = startedAt ? now - startedAt : 0;
   const visibleNotice = complete
@@ -1137,6 +1143,23 @@ export default function App() {
     setNotice("Skipped for now. It can come back later.");
   }
 
+  function giveUpQuiz() {
+    setGaveUp(true);
+    if (quizMode === "find") {
+      setFindTargetId(null);
+      setFindWrongIds([]);
+      setWrongFlashId(null);
+      setMapFocusRequest(null);
+      setFindDeferredIds(new Set());
+      setHintLevel(0);
+      setActiveId(null);
+      setNotice("Gave up. The remaining subdivisions are revealed.");
+      return;
+    }
+
+    setNotice("Gave up. Missing answers are revealed.");
+  }
+
   async function shareResult() {
     const text =
       quizMode === "find"
@@ -1505,8 +1528,8 @@ export default function App() {
                 <MousePointer2 size={20} aria-hidden="true" />
                 <div>
                   <span className="prompt-label">Find this subdivision</span>
-                  <strong>{complete ? "Complete" : prompt.primary}</strong>
-                  <span>{complete ? "Every subdivision in this quiz is completed." : prompt.secondary}</span>
+                  <strong>{findPromptTitle}</strong>
+                  <span>{findPromptDetail}</span>
                 </div>
               </div>
             )}
@@ -1520,7 +1543,7 @@ export default function App() {
                 <button
                   type="button"
                   className="danger-action"
-                  onClick={() => setGaveUp(true)}
+                  onClick={giveUpQuiz}
                   disabled={gaveUp || complete}
                 >
                   <Flag size={17} aria-hidden="true" />
@@ -1542,7 +1565,7 @@ export default function App() {
                   type="button"
                   className="hint-action"
                   onClick={requestHint}
-                  disabled={!currentTarget || complete || hintLevel >= MAX_FIND_HINTS}
+                  disabled={!currentTarget || gaveUp || complete || hintLevel >= MAX_FIND_HINTS}
                 >
                   <Lightbulb size={17} aria-hidden="true" />
                   Hint
@@ -1551,7 +1574,7 @@ export default function App() {
                   type="button"
                   className="reveal-action"
                   onClick={revealFindTarget}
-                  disabled={!currentTarget || complete}
+                  disabled={!currentTarget || gaveUp || complete}
                 >
                   <Eye size={17} aria-hidden="true" />
                   Reveal
@@ -1560,16 +1583,26 @@ export default function App() {
                   type="button"
                   className="skip-action"
                   onClick={skipFindTarget}
-                  disabled={!currentTarget || complete}
+                  disabled={!currentTarget || gaveUp || complete}
                 >
                   <SkipForward size={17} aria-hidden="true" />
                   Skip
                 </button>
                 <button
                   type="button"
+                  className="danger-action"
+                  onClick={giveUpQuiz}
+                  disabled={gaveUp || complete}
+                >
+                  <Flag size={17} aria-hidden="true" />
+                  Give up
+                </button>
+                <button
+                  type="button"
                   className="reset-action"
                   onClick={restartQuiz}
                   disabled={
+                    !gaveUp &&
                     !completedIds.size &&
                     !findStats.wrong &&
                     !findStats.hints &&
@@ -1646,10 +1679,8 @@ export default function App() {
               </div>
               <div className="find-target-card">
                 <span className="prompt-label">Find</span>
-                <strong>{complete ? "Complete" : prompt.primary}</strong>
-                <span>
-                  {complete ? "Every subdivision in this quiz is completed." : prompt.secondary}
-                </span>
+                <strong>{findPromptTitle}</strong>
+                <span>{findPromptDetail}</span>
               </div>
               <div className="find-tried-list">
                 <strong>Tried clicks</strong>
