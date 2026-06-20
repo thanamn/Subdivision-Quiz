@@ -16,6 +16,7 @@ const COMMONS_BATCH_SIZE = 50;
 const REQUEST_DELAY_MS = 100;
 const REQUEST_TIMEOUT_MS = 20000;
 const THUMBNAIL_WIDTH = 180;
+const CACHE_VERSION = 2;
 
 const PLACEHOLDER_FILE_PATTERN =
   /\b(no flag|noflag|placeholder|missing flag|unknown flag|generic flag)\b/i;
@@ -157,10 +158,26 @@ async function fetchWithRetry(url, options, label, attempt = 1) {
 async function fetchWikidataClaims(qids) {
   const values = qids.map((qid) => `wd:${qid}`).join(" ");
   const query = `
-SELECT ?item ?flag ?emblem WHERE {
+SELECT ?item ?flag ?fallbackFlag ?emblem ?fallbackEmblem WHERE {
   VALUES ?item { ${values} }
   OPTIONAL { ?item wdt:P41 ?flag. }
   OPTIONAL { ?item wdt:P94 ?emblem. }
+  OPTIONAL {
+    ?item p:P41 ?flagStatement.
+    ?flagStatement ps:P41 ?deprecatedFlag;
+      wikibase:rank wikibase:DeprecatedRank;
+      pq:P518 ?flagAppliesTo.
+    ?flagAppliesTo wdt:P41 ?fallbackFlag.
+    FILTER(?fallbackFlag = ?deprecatedFlag)
+  }
+  OPTIONAL {
+    ?item p:P94 ?emblemStatement.
+    ?emblemStatement ps:P94 ?deprecatedEmblem;
+      wikibase:rank wikibase:DeprecatedRank;
+      pq:P518 ?emblemAppliesTo.
+    ?emblemAppliesTo wdt:P94 ?fallbackEmblem.
+    FILTER(?fallbackEmblem = ?deprecatedEmblem)
+  }
 }`;
   const params = new URLSearchParams({
     format: "json",
@@ -180,8 +197,10 @@ SELECT ?item ?flag ?emblem WHERE {
       continue;
     }
 
-    const flag = normalizeFileTitle(binding.flag?.value);
-    const emblem = normalizeFileTitle(binding.emblem?.value);
+    const flag = normalizeFileTitle(binding.flag?.value || binding.fallbackFlag?.value);
+    const emblem = normalizeFileTitle(
+      binding.emblem?.value || binding.fallbackEmblem?.value,
+    );
     claims[qid] = {
       ...(claims[qid] || {}),
       ...(flag && !claims[qid]?.flag ? { flag } : {}),
@@ -254,6 +273,11 @@ async function main() {
   const topology = JSON.parse(await readFile(topologyPath, "utf8"));
   const qids = qidsFromTopology(topology);
   const cache = await readJsonFile(cachePath, { claims: {}, files: {} });
+  if (cache.version !== CACHE_VERSION) {
+    cache.claims = {};
+    cache.version = CACHE_VERSION;
+  }
+  cache.version = CACHE_VERSION;
   cache.claims ||= {};
   cache.files ||= {};
 

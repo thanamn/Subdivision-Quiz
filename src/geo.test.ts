@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import countryRegions from "../public/data/country-regions.json";
+import subdivisionMedia from "../public/data/subdivision-media.json";
 import topology from "../public/data/admin1.topo.json";
 import {
   buildNameIndex,
@@ -10,12 +11,17 @@ import {
 import { mediaForFeature, mediaKindLabel } from "./subdivisionMedia";
 import { visibleTinyMarkerItems } from "./QuizMap";
 import type { CountryRegionLookup } from "./geo";
-import type { SubdivisionFeature, SubdivisionMediaLookup } from "./types";
+import type {
+  SubdivisionFeature,
+  SubdivisionMediaData,
+  SubdivisionMediaLookup,
+} from "./types";
 
 const allFeatures = loadAdmin1Topology(
   topology,
   countryRegions as CountryRegionLookup,
 );
+const mediaLookup = (subdivisionMedia as SubdivisionMediaData).media || {};
 
 function featuresFor(countryCode: string) {
   return allFeatures.filter(
@@ -252,5 +258,16 @@ describe("mediaForFeature", () => {
     expect(daNang?.properties.wikidataId).toBeUndefined();
     expect(mediaForFeature(daNang, lookup)).toBeUndefined();
     expect(mediaKindLabel(lookup.Q25282)).toBe("Emblem");
+  });
+
+  it("includes Hokkaido's prefectural flag despite Natural Earth using the island QID", () => {
+    const hokkaido = featuresFor("JPN").find(
+      (feature) => feature.properties.name === "Hokkaidō",
+    );
+    const media = mediaForFeature(hokkaido, mediaLookup);
+
+    expect(hokkaido?.properties.wikidataId).toBe("Q35581");
+    expect(media?.kind).toBe("flag");
+    expect(media?.file).toBe("Flag of Hokkaido Prefecture.svg");
   });
 });
