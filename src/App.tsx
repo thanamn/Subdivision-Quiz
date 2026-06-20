@@ -188,7 +188,7 @@ function nativeNameText(feature: SubdivisionFeature) {
 }
 
 function prefersCanonicalPromptName(feature: SubdivisionFeature) {
-  return feature.properties.countryCode === "VNM";
+  return ["CAN", "VNM"].includes(feature.properties.countryCode);
 }
 
 function cloneFindStats(stats?: Partial<FindStats>) {

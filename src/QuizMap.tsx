@@ -89,6 +89,10 @@ type TinyMarkerDatum = {
   y: number;
 };
 
+type TinyMarkerVisibilityItem = {
+  tinyMarker: { alwaysVisible: boolean } | null;
+};
+
 type HintBox = {
   height: number;
   width: number;
@@ -162,6 +166,15 @@ function initialTinyMarkersVisible() {
   }
 
   return window.localStorage.getItem(TINY_MARKERS_KEY) === "1";
+}
+
+export function visibleTinyMarkerItems<T extends TinyMarkerVisibilityItem>(
+  markerData: T[],
+  showOptionalTinyMarkers: boolean,
+) {
+  return showOptionalTinyMarkers
+    ? markerData
+    : markerData.filter((item) => item.tinyMarker?.alwaysVisible);
 }
 
 function isFinitePoint(point: [number, number]) {
@@ -594,15 +607,29 @@ function QuizMap({
     () => pathData.filter((item) => item.tinyMarker),
     [pathData],
   );
-  const hasTinyMarkers = tinyMarkerData.length > 0;
+  const optionalTinyMarkerData = useMemo(
+    () => tinyMarkerData.filter((item) => !item.tinyMarker?.alwaysVisible),
+    [tinyMarkerData],
+  );
+  const requiredTinyMarkerData = useMemo(
+    () => tinyMarkerData.filter((item) => item.tinyMarker?.alwaysVisible),
+    [tinyMarkerData],
+  );
+  const hasOptionalTinyMarkers = optionalTinyMarkerData.length > 0;
   const effectiveTinyMarkersVisible = tinyMarkersVisible || forceTinyMarkers;
-  const tinyMarkerToggleLabel = hasTinyMarkers
+  const visibleTinyMarkerData = visibleTinyMarkerItems(
+    tinyMarkerData,
+    effectiveTinyMarkersVisible,
+  );
+  const tinyMarkerToggleLabel = hasOptionalTinyMarkers
     ? forceTinyMarkers
       ? "Tiny places are clickable in Find mode"
       : tinyMarkersVisible
       ? "Hide tiny places"
       : "Show tiny places"
-    : "No tiny places in this view";
+    : requiredTinyMarkerData.length
+      ? "Required tiny-place markers are always shown"
+      : "No tiny places in this view";
   const hintBox = useMemo(() => {
     const target = currentTargetId
       ? features.find((feature) => feature.properties.id === currentTargetId)
@@ -806,12 +833,12 @@ function QuizMap({
               height={hintBox.height}
             />
           ) : null}
-          {effectiveTinyMarkersVisible ? (
+          {visibleTinyMarkerData.length ? (
             <TinyMarkers
               activeId={activeId}
               clickable={clickable}
               guessed={guessed}
-              markerData={tinyMarkerData}
+              markerData={visibleTinyMarkerData}
               revealed={revealed}
               revealedIds={revealedIds}
               wrongIds={wrongIds}
@@ -854,14 +881,14 @@ function QuizMap({
         <button
           type="button"
           className={
-            hasTinyMarkers && effectiveTinyMarkersVisible
+            hasOptionalTinyMarkers && effectiveTinyMarkersVisible
               ? "detail-toggle is-active"
               : "detail-toggle"
           }
           title={tinyMarkerToggleLabel}
           aria-label={tinyMarkerToggleLabel}
-          aria-pressed={hasTinyMarkers && effectiveTinyMarkersVisible}
-          disabled={!hasTinyMarkers || forceTinyMarkers}
+          aria-pressed={hasOptionalTinyMarkers && effectiveTinyMarkersVisible}
+          disabled={!hasOptionalTinyMarkers || forceTinyMarkers}
           onClick={() => setTinyMarkersVisible((current) => !current)}
         >
           <MapPin size={17} aria-hidden="true" />

@@ -7,6 +7,7 @@ import {
   loadAdmin1Topology,
   normalizeGuess,
 } from "./geo";
+import { visibleTinyMarkerItems } from "./QuizMap";
 import type { CountryRegionLookup } from "./geo";
 import type { SubdivisionFeature } from "./types";
 
@@ -89,10 +90,16 @@ describe("buildNameIndex", () => {
     expect(namesFor(mexicoIndex, "CDMX")).toEqual(["Mexico City"]);
   });
 
-  it("keeps Canadian French province names as aliases without displaying them as primary native names", () => {
+  it("keeps Canadian French names as aliases without displaying them as primary names", () => {
     const canada = featuresFor("CAN");
     const britishColumbia = canada.find(
       (feature) => feature.properties.name === "British Columbia",
+    );
+    const northwestTerritories = canada.find(
+      (feature) => feature.properties.name === "Northwest Territories",
+    );
+    const newfoundland = canada.find(
+      (feature) => feature.properties.name === "Newfoundland and Labrador",
     );
     const canadaIndex = buildNameIndex(canada);
 
@@ -103,6 +110,22 @@ describe("buildNameIndex", () => {
     });
     expect(namesFor(canadaIndex, "Colombie-Britannique")).toEqual([
       "British Columbia",
+    ]);
+    expect(northwestTerritories?.properties.nativeNames).toContainEqual({
+      display: false,
+      lang: "fr",
+      name: "Territoires du Nord-Ouest",
+    });
+    expect(newfoundland?.properties.nativeNames).toContainEqual({
+      display: false,
+      lang: "fr",
+      name: "Terre-Neuve-et-Labrador",
+    });
+    expect(namesFor(canadaIndex, "Territoires du Nord-Ouest")).toEqual([
+      "Northwest Territories",
+    ]);
+    expect(namesFor(canadaIndex, "Terre-Neuve-et-Labrador")).toEqual([
+      "Newfoundland and Labrador",
     ]);
   });
 
@@ -171,6 +194,21 @@ describe("buildNameIndex", () => {
       "North Denmark",
       "Southern Denmark",
       "Zealand",
+    ]);
+  });
+});
+
+describe("visibleTinyMarkerItems", () => {
+  it("keeps required collapsed-geometry markers visible when optional markers are off", () => {
+    const required = { id: "SYC-5220", tinyMarker: { alwaysVisible: true } };
+    const optional = { id: "SYC-5203", tinyMarker: { alwaysVisible: false } };
+
+    expect(visibleTinyMarkerItems([required, optional], false)).toEqual([
+      required,
+    ]);
+    expect(visibleTinyMarkerItems([required, optional], true)).toEqual([
+      required,
+      optional,
     ]);
   });
 });
