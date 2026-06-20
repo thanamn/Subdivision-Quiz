@@ -440,20 +440,19 @@ function SubdivisionMediaPreview({
 
   const label = mediaKindLabel(media);
   const creditText = media.licenseShortName
-    ? `${label} from Wikimedia Commons (${media.licenseShortName})`
-    : `${label} from Wikimedia Commons`;
+    ? `Wikimedia Commons (${media.licenseShortName})`
+    : "Wikimedia Commons";
 
   return (
     <figure className={`subdivision-media is-${size}`}>
       <img
         src={media.imageUrl}
-        alt={`${label} clue`}
+        alt={`${label} for the current subdivision`}
         loading="lazy"
         decoding="async"
       />
       {size === "large" ? (
         <figcaption>
-          <span>{label} clue</span>
           <a href={media.commonsUrl} target="_blank" rel="noreferrer">
             {creditText}
           </a>
@@ -1506,7 +1505,7 @@ export default function App() {
                 <ul>
                   <li>Type mode accepts English, local, romanized, or native-script names.</li>
                   <li>
-                    Find mode gives you a name, plus a flag or emblem clue when available.
+                    Find mode gives you a name, plus a flag or emblem when available.
                   </li>
                   <li>Wrong clicks reveal what you clicked and count against accuracy.</li>
                   <li>Hints draw a shrinking search area without centering the answer.</li>

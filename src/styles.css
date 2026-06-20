@@ -855,12 +855,6 @@ a {
   line-height: 1.25;
 }
 
-.subdivision-media figcaption span {
-  color: #34434a;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
 .subdivision-media figcaption a {
   min-width: 0;
   overflow-wrap: anywhere;
