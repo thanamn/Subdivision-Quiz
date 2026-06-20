@@ -602,6 +602,7 @@ export default function App() {
 
     return () => {
       cancelled = true;
+      subdivisionMediaAttemptedRef.current = false;
     };
   }, [quizMode]);
 

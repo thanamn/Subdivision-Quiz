@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { StrictMode } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import topology from "../public/data/admin1.topo.json";
@@ -388,6 +389,22 @@ describe("App Type mode", () => {
 });
 
 describe("App Find mode", () => {
+  it("loads current-target media under React StrictMode in dev", async () => {
+    mockRandomForFeature("JPN", "Hokkaidō");
+    window.history.pushState(null, "", "/?country=JPN&mode=find");
+
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+
+    await waitForFeatureCount(47);
+    expect(
+      (await screen.findAllByAltText("Flag for the current subdivision")).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("chooses a deterministic current target and shows media when available", async () => {
     const hokkaido = mockRandomForFeature("JPN", "Hokkaidō");
 
