@@ -57,6 +57,25 @@ export type NativeName = {
   name: string;
 };
 
+export type SubdivisionMedia = {
+  attributionRequired?: boolean;
+  artist?: string;
+  commonsUrl: string;
+  credit?: string;
+  file: string;
+  fullImageUrl?: string;
+  imageUrl: string;
+  kind: "flag" | "emblem";
+  licenseShortName?: string;
+  licenseUrl?: string;
+};
+
+export type SubdivisionMediaLookup = Record<string, SubdivisionMedia>;
+
+export type SubdivisionMediaData = {
+  media?: SubdivisionMediaLookup;
+};
+
 export type SubdivisionProperties = {
   id: string;
   adm1Code: string;

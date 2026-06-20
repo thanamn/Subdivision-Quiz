@@ -31,14 +31,23 @@ import {
   scopeLabel,
 } from "./geo";
 import type { CountryRegionLookup } from "./geo";
-import type { NativeName, Scope, SubdivisionFeature } from "./types";
+import { mediaForFeature, mediaKindLabel } from "./subdivisionMedia";
+import type {
+  NativeName,
+  Scope,
+  SubdivisionFeature,
+  SubdivisionMedia,
+  SubdivisionMediaData,
+  SubdivisionMediaLookup,
+} from "./types";
 
 const DATA_URL = `${import.meta.env.BASE_URL}data/admin1.topo.json`;
 const COUNTRY_REGIONS_URL = `${import.meta.env.BASE_URL}data/country-regions.json`;
+const SUBDIVISION_MEDIA_URL = `${import.meta.env.BASE_URL}data/subdivision-media.json`;
 const LAST_SCOPE_KEY = "subdivision-quiz:last-scope";
 const MATCH_MODE_KEY = "subdivision-quiz:match-mode";
 const QUIZ_MODE_KEY = "subdivision-quiz:quiz-mode";
-const HELP_CARD_KEY = "subdivision-quiz:help-dismissed:v2";
+const HELP_CARD_KEY = "subdivision-quiz:help-dismissed:v3";
 const WIKIDATA_ENDPOINT = "https://www.wikidata.org/w/api.php";
 const WIKIDATA_BATCH_SIZE = 35;
 const NATIVE_NAME_CANDIDATE_LIMIT = 8;
@@ -196,6 +205,20 @@ function cloneFindStats(stats?: Partial<FindStats>) {
     ...EMPTY_FIND_STATS,
     ...stats,
   };
+}
+
+async function loadSubdivisionMedia(): Promise<SubdivisionMediaLookup> {
+  try {
+    const response = await fetch(SUBDIVISION_MEDIA_URL);
+    if (!response.ok) {
+      return {};
+    }
+
+    const data = (await response.json()) as SubdivisionMediaData;
+    return data.media || {};
+  } catch {
+    return {};
+  }
 }
 
 function featureShortName(feature: SubdivisionFeature) {
@@ -404,6 +427,42 @@ function LocalNameLine({ feature }: { feature: SubdivisionFeature }) {
   return text ? <span className="local-name">{text}</span> : null;
 }
 
+function SubdivisionMediaPreview({
+  media,
+  size = "small",
+}: {
+  media: SubdivisionMedia | undefined;
+  size?: "small" | "large";
+}) {
+  if (!media) {
+    return null;
+  }
+
+  const label = mediaKindLabel(media);
+  const creditText = media.licenseShortName
+    ? `${label} from Wikimedia Commons (${media.licenseShortName})`
+    : `${label} from Wikimedia Commons`;
+
+  return (
+    <figure className={`subdivision-media is-${size}`}>
+      <img
+        src={media.imageUrl}
+        alt={`${label} clue`}
+        loading="lazy"
+        decoding="async"
+      />
+      {size === "large" ? (
+        <figcaption>
+          <span>{label} clue</span>
+          <a href={media.commonsUrl} target="_blank" rel="noreferrer">
+            {creditText}
+          </a>
+        </figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
 function CompletionConfetti({ run }: { run: number }) {
   if (!run) {
     return null;
@@ -441,8 +500,11 @@ export default function App() {
     wasComplete: false,
   });
   const nativeNameAttemptedQidsRef = useRef<Set<string>>(new Set());
+  const subdivisionMediaAttemptedRef = useRef(false);
   const [allFeatures, setAllFeatures] = useState<SubdivisionFeature[]>([]);
   const [countryRegionLookup, setCountryRegionLookup] = useState<CountryRegionLookup>({});
+  const [subdivisionMediaLookup, setSubdivisionMediaLookup] =
+    useState<SubdivisionMediaLookup>({});
   const [nativeNameLookup, setNativeNameLookup] = useState<Record<string, NativeName[]>>({});
   const [nativeNamesLoading, setNativeNamesLoading] = useState(false);
   const [scope, setScope] = useState<Scope>(initialScope);
@@ -524,6 +586,25 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (quizMode !== "find" || subdivisionMediaAttemptedRef.current) {
+      return undefined;
+    }
+
+    subdivisionMediaAttemptedRef.current = true;
+    let cancelled = false;
+
+    loadSubdivisionMedia().then((mediaLookup) => {
+      if (!cancelled) {
+        setSubdivisionMediaLookup(mediaLookup);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [quizMode]);
 
   const countries = useMemo(() => buildCountrySummaries(allFeatures), [allFeatures]);
   const regions = useMemo(() => buildRegionSummaries(countries), [countries]);
@@ -617,6 +698,7 @@ export default function App() {
   );
   const wrongIdSet = useMemo(() => new Set(findWrongIds), [findWrongIds]);
   const prompt = promptNames(currentTarget);
+  const currentTargetMedia = mediaForFeature(currentTarget, subdivisionMediaLookup);
   const complete = total > 0 && completedIds.size >= total;
   const findPromptTitle = gaveUp ? "Gave up" : complete ? "Complete" : prompt.primary;
   const findPromptDetail = gaveUp
@@ -1423,7 +1505,9 @@ export default function App() {
                 </p>
                 <ul>
                   <li>Type mode accepts English, local, romanized, or native-script names.</li>
-                  <li>Find mode gives you a name and asks you to click the territory.</li>
+                  <li>
+                    Find mode gives you a name, plus a flag or emblem clue when available.
+                  </li>
                   <li>Wrong clicks reveal what you clicked and count against accuracy.</li>
                   <li>Hints draw a shrinking search area without centering the answer.</li>
                   <li>Your progress saves automatically; Reset starts this quiz over.</li>
@@ -1525,7 +1609,11 @@ export default function App() {
               </>
             ) : (
               <div className="find-prompt" aria-live="polite">
-                <MousePointer2 size={20} aria-hidden="true" />
+                {currentTargetMedia ? (
+                  <SubdivisionMediaPreview media={currentTargetMedia} />
+                ) : (
+                  <MousePointer2 size={20} aria-hidden="true" />
+                )}
                 <div>
                   <span className="prompt-label">Find this subdivision</span>
                   <strong>{findPromptTitle}</strong>
@@ -1678,6 +1766,7 @@ export default function App() {
                 <h3>Current Target</h3>
               </div>
               <div className="find-target-card">
+                <SubdivisionMediaPreview media={currentTargetMedia} size="large" />
                 <span className="prompt-label">Find</span>
                 <strong>{findPromptTitle}</strong>
                 <span>{findPromptDetail}</span>

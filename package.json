@@ -9,8 +9,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "check": "npm run test:run && npm run build",
+    "media": "node scripts/build-subdivision-media.mjs",
     "preview": "vite preview --host 127.0.0.1",
-    "data": "node scripts/build-data.mjs"
+    "data": "node scripts/build-data.mjs && node scripts/build-subdivision-media.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",

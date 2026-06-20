@@ -813,6 +813,59 @@ a {
   color: #0f8b8d;
 }
 
+.subdivision-media {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+}
+
+.subdivision-media img {
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+  border: 1px solid #d9e0df;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.subdivision-media.is-small {
+  width: 58px;
+}
+
+.subdivision-media.is-small img {
+  width: 58px;
+  height: 38px;
+}
+
+.subdivision-media.is-large {
+  margin-bottom: 4px;
+}
+
+.subdivision-media.is-large img {
+  width: 100%;
+  max-height: 132px;
+}
+
+.subdivision-media figcaption {
+  display: grid;
+  gap: 2px;
+  color: #526269;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.subdivision-media figcaption span {
+  color: #34434a;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.subdivision-media figcaption a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .find-prompt div {
   display: grid;
   min-width: 0;

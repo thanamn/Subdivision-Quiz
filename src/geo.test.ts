@@ -7,9 +7,10 @@ import {
   loadAdmin1Topology,
   normalizeGuess,
 } from "./geo";
+import { mediaForFeature, mediaKindLabel } from "./subdivisionMedia";
 import { visibleTinyMarkerItems } from "./QuizMap";
 import type { CountryRegionLookup } from "./geo";
-import type { SubdivisionFeature } from "./types";
+import type { SubdivisionFeature, SubdivisionMediaLookup } from "./types";
 
 const allFeatures = loadAdmin1Topology(
   topology,
@@ -210,5 +211,46 @@ describe("visibleTinyMarkerItems", () => {
       required,
       optional,
     ]);
+  });
+});
+
+describe("mediaForFeature", () => {
+  it("matches subdivision media by Wikidata ID", () => {
+    const california = featuresFor("USA").find(
+      (feature) => feature.properties.name === "California",
+    );
+    expect(california?.properties.wikidataId).toBeTruthy();
+
+    const media = {
+      commonsUrl: "https://commons.wikimedia.org/wiki/File:Flag_of_California.svg",
+      file: "Flag of California.svg",
+      imageUrl:
+        "https://commons.wikimedia.org/wiki/Special:Redirect/file/Flag%20of%20California.svg?width=180",
+      kind: "flag" as const,
+    };
+    const lookup: SubdivisionMediaLookup = {
+      [california?.properties.wikidataId || ""]: media,
+    };
+
+    expect(mediaForFeature(california, lookup)).toEqual(media);
+    expect(mediaKindLabel(media)).toBe("Flag");
+  });
+
+  it("does not attach old member media to synthetic merged subdivisions", () => {
+    const daNang = featuresFor("VNM").find(
+      (feature) => feature.properties.name === "Đà Nẵng",
+    );
+    const lookup: SubdivisionMediaLookup = {
+      Q25282: {
+        commonsUrl: "https://commons.wikimedia.org/wiki/File:Unused.svg",
+        file: "Unused.svg",
+        imageUrl: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Unused.svg",
+        kind: "emblem",
+      },
+    };
+
+    expect(daNang?.properties.wikidataId).toBeUndefined();
+    expect(mediaForFeature(daNang, lookup)).toBeUndefined();
+    expect(mediaKindLabel(lookup.Q25282)).toBe("Emblem");
   });
 });
