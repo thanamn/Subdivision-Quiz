@@ -9,4 +9,7 @@ export default defineConfig({
       ignored: ["**/data/raw/**"],
     },
   },
+  test: {
+    setupFiles: "./src/test/setup.ts",
+  },
 });

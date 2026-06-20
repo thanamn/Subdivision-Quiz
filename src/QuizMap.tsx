@@ -421,6 +421,7 @@ const MapShapes = memo(function MapShapes({
         return (
           <path
             key={item.id}
+            data-testid={`map-region-${item.id}`}
             className={className}
             d={item.d}
             style={item.style}
@@ -487,6 +488,7 @@ const TinyMarkers = memo(function TinyMarkers({
         return (
           <circle
             key={item.id}
+            data-testid={`tiny-marker-${item.id}`}
             className={className}
             cx={item.tinyMarker.x}
             cy={item.tinyMarker.y}
@@ -826,6 +828,7 @@ function QuizMap({
           />
           {hintBox ? (
             <rect
+              data-testid="map-hint-box"
               className="hint-box"
               x={hintBox.x}
               y={hintBox.y}
