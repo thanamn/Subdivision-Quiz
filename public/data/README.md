@@ -24,6 +24,14 @@ administrative divisions" and that Natural Earth map data is public domain.
 The generated file keeps only the fields used by the quiz and simplifies the
 geometry for browser rendering.
 
+Some fast-moving administrative changes are applied at app load time when
+Natural Earth has not caught up yet. Vietnam's 2025 reorganization is merged
+from the checked-in Natural Earth source geometries into 34 current
+provincial-level units in `src/geo.ts`.
+
+See `freshness-audit.md` for other checked countries with known stale or
+mixed-level Admin-1 data.
+
 Run this to rebuild it:
 
 ```sh

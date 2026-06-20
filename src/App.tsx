@@ -181,7 +181,10 @@ function localNameText(feature: SubdivisionFeature) {
 }
 
 function nativeNameText(feature: SubdivisionFeature) {
-  return feature.properties.nativeNames.map((nativeName) => nativeName.name).join(" / ");
+  return feature.properties.nativeNames
+    .filter((nativeName) => nativeName.display !== false)
+    .map((nativeName) => nativeName.name)
+    .join(" / ");
 }
 
 function cloneFindStats(stats?: Partial<FindStats>) {
@@ -210,14 +213,17 @@ function promptNames(feature: SubdivisionFeature | undefined) {
   }
 
   const local = feature.properties.localNames[0];
-  const native = feature.properties.nativeNames[0]?.name;
+  const displayNativeNames = feature.properties.nativeNames.filter(
+    (nativeName) => nativeName.display !== false,
+  );
+  const native = displayNativeNames[0]?.name;
   const primary = native || local || feature.properties.name;
   const secondary = [
     feature.properties.name,
     local,
     native,
     ...feature.properties.localNames.slice(1),
-    ...feature.properties.nativeNames.slice(1).map((nativeName) => nativeName.name),
+    ...displayNativeNames.slice(1).map((nativeName) => nativeName.name),
   ]
     .filter((name): name is string => Boolean(name))
     .filter((name, index, names) => {

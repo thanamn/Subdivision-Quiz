@@ -89,6 +89,69 @@ describe("buildNameIndex", () => {
     expect(namesFor(mexicoIndex, "CDMX")).toEqual(["Mexico City"]);
   });
 
+  it("keeps Canadian French province names as aliases without displaying them as primary native names", () => {
+    const canada = featuresFor("CAN");
+    const britishColumbia = canada.find(
+      (feature) => feature.properties.name === "British Columbia",
+    );
+    const canadaIndex = buildNameIndex(canada);
+
+    expect(britishColumbia?.properties.nativeNames).toContainEqual({
+      display: false,
+      lang: "fr",
+      name: "Colombie-Britannique",
+    });
+    expect(namesFor(canadaIndex, "Colombie-Britannique")).toEqual([
+      "British Columbia",
+    ]);
+  });
+
+  it("uses playable Seychelles district display names and aliases", () => {
+    const seychelles = featuresFor("SYC");
+    const seychellesIndex = buildNameIndex(seychelles);
+    const displayNames = seychelles.map((feature) => feature.properties.name);
+
+    expect(displayNames).toContain("Outer Islands");
+    expect(displayNames).toContain("Grand'Anse Mahé");
+    expect(displayNames).toContain("La Digue and Inner Islands");
+    expect(displayNames).toContain("English River");
+    expect(
+      displayNames.filter((name) => name === "Grand'Anse Praslin"),
+    ).toHaveLength(1);
+    expect(namesFor(seychellesIndex, "Takamaka")).toEqual(["Takamaka"]);
+    expect(namesFor(seychellesIndex, "La Digue")).toEqual([
+      "La Digue and Inner Islands",
+    ]);
+    expect(namesFor(seychellesIndex, "La Rivière Anglaise")).toEqual([
+      "English River",
+    ]);
+  });
+
+  it("uses Vietnam's 2025 provincial-level reorganization", () => {
+    const vietnam = featuresFor("VNM");
+    const vietnamIndex = buildNameIndex(vietnam);
+    const displayNames = vietnam.map((feature) => feature.properties.name).sort();
+
+    expect(vietnam).toHaveLength(34);
+    expect(displayNames).toContain("Huế");
+    expect(displayNames).toContain("Hồ Chí Minh City");
+    expect(displayNames).toContain("Đà Nẵng");
+    expect(displayNames).toContain("Thái Nguyên");
+    expect(displayNames).not.toContain("Bình Dương");
+    expect(displayNames).not.toContain("Bà Rịa-Vũng Tàu");
+    expect(displayNames).not.toContain("Northeast Vietnam");
+    expect(namesFor(vietnamIndex, "Bình Dương")).toEqual([
+      "Hồ Chí Minh City",
+    ]);
+    expect(namesFor(vietnamIndex, "Ba Ria Vung Tau")).toEqual([
+      "Hồ Chí Minh City",
+    ]);
+    expect(namesFor(vietnamIndex, "Bắc Kạn")).toEqual(["Thái Nguyên"]);
+    expect(namesFor(vietnamIndex, "Thừa Thiên Huế")).toEqual(["Huế"]);
+    expect(namesFor(vietnamIndex, "Red River Delta")).toEqual([]);
+    expect(namesFor(vietnamIndex, "Northeast Vietnam")).toEqual([]);
+  });
+
   it("builds deterministic sorted quiz lists", () => {
     const denmark = featuresFor("DNK").sort(byCountryThenName);
 

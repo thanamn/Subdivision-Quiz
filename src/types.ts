@@ -36,6 +36,7 @@ export type RawAdmin1Properties = {
   name_zh?: string;
   name_zht?: string;
   native_names?: Array<{
+    display?: boolean;
     lang: string;
     name: string;
   }>;

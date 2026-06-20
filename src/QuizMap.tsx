@@ -23,6 +23,7 @@ const TINY_PROJECTED_MAX_AREA = 130;
 const TINY_PROJECTED_MIN_SIDE = 5;
 const TINY_MARKER_MAX_SCREEN_RADIUS = 8;
 const TINY_MARKER_MIN_SCREEN_RADIUS = 4;
+const COLLAPSED_GEOGRAPHIC_AREA = 0.0000000001;
 const TINY_ZOOM_MAX_SIDE_FLOOR = 12;
 const TINY_ZOOM_MAX_AREA_FLOOR = 64;
 const TINY_ZOOM_MIN_SIDE_FLOOR = 3;
@@ -81,6 +82,7 @@ type PathDatum = {
 };
 
 type TinyMarkerDatum = {
+  alwaysVisible: boolean;
   height: number;
   width: number;
   x: number;
@@ -145,6 +147,13 @@ function featureCollection(features: SubdivisionFeature[]): FeatureCollection {
     type: "FeatureCollection",
     features,
   };
+}
+
+function nativeNameText(feature: SubdivisionFeature) {
+  return feature.properties.nativeNames
+    .filter((nativeName) => nativeName.display !== false)
+    .map((nativeName) => nativeName.name)
+    .join(" / ");
 }
 
 function initialTinyMarkersVisible() {
@@ -245,12 +254,15 @@ function tinyMarkerForFeature(
     return null;
   }
 
-  const geographicallyTiny = geoArea(feature) < TINY_GEOGRAPHIC_AREA;
+  const geographicArea = geoArea(feature);
+  const collapsedGeometry = geographicArea < COLLAPSED_GEOGRAPHIC_AREA;
+  const geographicallyTiny = geographicArea < TINY_GEOGRAPHIC_AREA;
   const projectedTiny =
     scope.kind === "country" && tinyProjectedSize(bounds);
 
   return projectedTiny || (scope.kind !== "country" && geographicallyTiny)
     ? {
+        alwaysVisible: collapsedGeometry,
         height,
         width,
         x: centroid[0],
@@ -431,7 +443,10 @@ const TinyMarkers = memo(function TinyMarkers({
           return null;
         }
 
-        if (!tinyScreenSize(item.tinyMarker, zoomScale)) {
+        if (
+          !item.tinyMarker.alwaysVisible &&
+          !tinyScreenSize(item.tinyMarker, zoomScale)
+        ) {
           return null;
         }
 
@@ -726,7 +741,7 @@ function QuizMap({
         y: event.clientY - rect.top,
         title,
         local: feature.properties.localNames.join(" / "),
-        native: feature.properties.nativeNames.map((nativeName) => nativeName.name).join(" / "),
+        native: nativeNameText(feature),
         meta,
       });
     },
