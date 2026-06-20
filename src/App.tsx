@@ -187,6 +187,10 @@ function nativeNameText(feature: SubdivisionFeature) {
     .join(" / ");
 }
 
+function prefersCanonicalPromptName(feature: SubdivisionFeature) {
+  return feature.properties.countryCode === "VNM";
+}
+
 function cloneFindStats(stats?: Partial<FindStats>) {
   return {
     ...EMPTY_FIND_STATS,
@@ -195,6 +199,10 @@ function cloneFindStats(stats?: Partial<FindStats>) {
 }
 
 function featureShortName(feature: SubdivisionFeature) {
+  if (prefersCanonicalPromptName(feature)) {
+    return feature.properties.name;
+  }
+
   const local = localNameText(feature);
   const native = nativeNameText(feature);
   const secondary = [local, native].find(
@@ -217,9 +225,12 @@ function promptNames(feature: SubdivisionFeature | undefined) {
     (nativeName) => nativeName.display !== false,
   );
   const native = displayNativeNames[0]?.name;
-  const primary = native || local || feature.properties.name;
+  const prefersCanonicalName = prefersCanonicalPromptName(feature);
+  const primary = prefersCanonicalName
+    ? feature.properties.name
+    : native || local || feature.properties.name;
   const secondary = [
-    feature.properties.name,
+    prefersCanonicalName ? undefined : feature.properties.name,
     local,
     native,
     ...feature.properties.localNames.slice(1),

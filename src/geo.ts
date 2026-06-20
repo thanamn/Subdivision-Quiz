@@ -128,9 +128,10 @@ const VIETNAM_2025_UNITS: Vietnam2025Unit[] = [
   },
   {
     adm1Code: "VNM-2025-HO-CHI-MINH-CITY",
+    aliases: ["Hồ Chí Minh City", "Thành phố Hồ Chí Minh"],
     kind: "city",
     memberCodes: ["VNM-501", "VNM-483", "VNM-495"],
-    name: "Hồ Chí Minh City",
+    name: "Hồ Chí Minh",
   },
   {
     adm1Code: "VNM-2025-DONG-NAI",
@@ -409,8 +410,11 @@ function vietnam2025NameAlt(unit: Vietnam2025Unit, memberProps: RawAdmin1Propert
     "red river delta",
     "south east",
   ]);
+  const typedVietnameseName =
+    unit.kind === "city" ? `Thành phố ${unit.name}` : `Tỉnh ${unit.name}`;
 
   return compactAliases([
+    typedVietnameseName,
     ...(unit.aliases || []),
     ...memberProps.flatMap((props) => [
       props.name,

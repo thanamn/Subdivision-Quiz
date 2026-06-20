@@ -134,17 +134,27 @@ describe("buildNameIndex", () => {
 
     expect(vietnam).toHaveLength(34);
     expect(displayNames).toContain("Huế");
-    expect(displayNames).toContain("Hồ Chí Minh City");
+    expect(displayNames).toContain("Hồ Chí Minh");
     expect(displayNames).toContain("Đà Nẵng");
+    expect(displayNames).toContain("Đắk Lắk");
     expect(displayNames).toContain("Thái Nguyên");
+    expect(displayNames).not.toContain("Da Nang");
+    expect(displayNames).not.toContain("Dak Lak");
+    expect(displayNames).not.toContain("Ho Chi Minh City");
     expect(displayNames).not.toContain("Bình Dương");
     expect(displayNames).not.toContain("Bà Rịa-Vũng Tàu");
     expect(displayNames).not.toContain("Northeast Vietnam");
+    expect(namesFor(vietnamIndex, "Da Nang")).toEqual(["Đà Nẵng"]);
+    expect(namesFor(vietnamIndex, "Dak Lak")).toEqual(["Đắk Lắk"]);
+    expect(namesFor(vietnamIndex, "Thanh pho Da Nang")).toEqual(["Đà Nẵng"]);
+    expect(namesFor(vietnamIndex, "Tinh Dak Lak")).toEqual(["Đắk Lắk"]);
+    expect(namesFor(vietnamIndex, "Ho Chi Minh")).toEqual(["Hồ Chí Minh"]);
+    expect(namesFor(vietnamIndex, "Ho Chi Minh City")).toEqual(["Hồ Chí Minh"]);
     expect(namesFor(vietnamIndex, "Bình Dương")).toEqual([
-      "Hồ Chí Minh City",
+      "Hồ Chí Minh",
     ]);
     expect(namesFor(vietnamIndex, "Ba Ria Vung Tau")).toEqual([
-      "Hồ Chí Minh City",
+      "Hồ Chí Minh",
     ]);
     expect(namesFor(vietnamIndex, "Bắc Kạn")).toEqual(["Thái Nguyên"]);
     expect(namesFor(vietnamIndex, "Thừa Thiên Huế")).toEqual(["Huế"]);
