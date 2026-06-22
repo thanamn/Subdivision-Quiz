@@ -9,6 +9,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "check": "npm run test:run && npm run build",
+    "audit:short-latin": "node scripts/audit-short-latin-matches.mjs",
     "media": "node scripts/build-subdivision-media.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "data": "node scripts/build-data.mjs && node scripts/build-subdivision-media.mjs"
