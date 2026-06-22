@@ -1,0 +1,177 @@
+@media (max-width: 1040px) {
+  .header-scope-strip {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: stretch;
+  }
+
+  .header-scope-strip .country-select {
+    max-width: none;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-bar {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.7fr);
+  }
+
+  .quiz-bar.is-find-mode {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.7fr);
+  }
+
+  .quiz-bar .guess-form,
+  .quiz-bar .find-prompt,
+  .quiz-bar .notice {
+    grid-column: 1 / -1;
+  }
+
+  .quiz-bar.is-find-mode .notice {
+    grid-column: 1;
+  }
+
+  .quiz-bar.is-find-mode .find-actions {
+    grid-column: 2;
+  }
+
+  .side-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .side-panel .find-side-card {
+    grid-column: 1 / -1;
+  }
+
+  .side-panel .data-credit {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar,
+  .map-heading,
+  .scope-strip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .topbar {
+    padding: 14px;
+  }
+
+  .top-actions {
+    justify-content: stretch;
+  }
+
+  .top-actions .icon-button {
+    flex: 1;
+  }
+
+  .workspace {
+    padding: 10px;
+  }
+
+  .metric-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .metric-row.is-find-mode {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .quiz-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-bar.is-find-mode {
+    grid-template-columns: 1fr;
+  }
+
+  .quiz-bar .guess-form,
+  .quiz-bar .find-prompt,
+  .quiz-bar .notice {
+    grid-column: auto;
+  }
+
+  .quiz-bar.is-find-mode .notice,
+  .quiz-bar.is-find-mode .find-actions {
+    grid-column: auto;
+  }
+
+  .map-shell {
+    width: 100%;
+    max-width: 100%;
+    min-height: 320px;
+    aspect-ratio: 4 / 3;
+  }
+
+  .zoom-controls {
+    right: 8px;
+    top: 8px;
+  }
+
+  .side-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .select-control,
+  .country-select,
+  .quiz-mode-switch {
+    width: 100%;
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .header-scope-strip .country-select {
+    flex: 0 1 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand {
+    align-items: flex-start;
+  }
+
+  .brand p {
+    font-size: 0.86rem;
+  }
+
+  .guess-form {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .guess-form button {
+    grid-column: 1 / -1;
+  }
+
+  .panel-actions button {
+    gap: 5px;
+    padding: 0 9px;
+  }
+
+  .panel-actions.find-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .find-prompt {
+    align-items: start;
+  }
+
+  .find-prompt strong {
+    font-size: 1rem;
+  }
+
+  .metric-row strong {
+    font-size: 0.98rem;
+  }
+
+  .metric-row div {
+    padding: 8px 5px;
+  }
+
+  .metric-row span {
+    font-size: 0.68rem;
+  }
+}

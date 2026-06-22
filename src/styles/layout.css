@@ -1,0 +1,71 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #d9e0df;
+  background: #ffffff;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+}
+
+.brand svg {
+  flex: 0 0 auto;
+  color: #0f8b8d;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.4vw, 1.75rem);
+  line-height: 1.05;
+}
+
+.brand p {
+  margin: 4px 0 0;
+  color: #5d6a70;
+  font-size: 0.94rem;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.icon-button,
+.zoom-controls button {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #cbd6d5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2b31;
+}
+
+.icon-button:hover,
+.zoom-controls button:hover {
+  border-color: #0f8b8d;
+  color: #0f6f72;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  gap: 16px;
+  padding: 16px;
+}
+
+.play-area,
+.side-panel {
+  min-width: 0;
+}

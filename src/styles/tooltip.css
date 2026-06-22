@@ -1,0 +1,36 @@
+.map-tooltip {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  max-width: min(260px, calc(100% - 24px));
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(23, 33, 38, 0.94);
+  color: #ffffff;
+  pointer-events: none;
+  transform: translate(12px, -105%);
+  transform-origin: left bottom;
+  animation: tooltip-in 130ms ease-out;
+  box-shadow: 0 12px 30px rgba(20, 34, 39, 0.22);
+}
+
+.map-tooltip strong,
+.map-tooltip span {
+  overflow-wrap: anywhere;
+}
+
+.map-tooltip span {
+  color: #d9e5e6;
+  font-size: 0.82rem;
+}
+
+.map-tooltip .tooltip-local {
+  color: #d9e5e6;
+  font-size: 0.88rem;
+}
+
+.map-tooltip .tooltip-native {
+  color: #ffffff;
+  font-size: 0.96rem;
+}

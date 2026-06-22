@@ -1,0 +1,25 @@
+.completion-confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -24px;
+  left: var(--confetti-left);
+  width: var(--confetti-width);
+  height: var(--confetti-height);
+  border-radius: 2px;
+  background: var(--confetti-color);
+  opacity: 0;
+  transform: translate3d(0, -18px, 0) rotate(0deg);
+  animation: confetti-fall var(--confetti-duration) cubic-bezier(0.18, 0.72, 0.31, 1)
+    var(--confetti-delay) forwards;
+}
+
+.confetti-piece.is-round {
+  border-radius: 999px;
+}
