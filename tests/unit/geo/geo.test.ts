@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import countryRegions from "../public/data/country-regions.json";
-import subdivisionMedia from "../public/data/subdivision-media.json";
-import topology from "../public/data/admin1.topo.json";
+import countryRegions from "../../../public/data/country-regions.json";
+import subdivisionMedia from "../../../public/data/subdivision-media.json";
+import topology from "../../../public/data/admin1.topo.json";
 import {
   buildNameIndex,
   buildCountrySummaries,
@@ -12,15 +12,15 @@ import {
   normalizeGuess,
   scopeKey,
   scopeLabel,
-} from "./geo";
-import { mediaForFeature, mediaKindLabel } from "./subdivisionMedia";
-import { visibleTinyMarkerItems } from "./QuizMap";
-import type { CountryRegionLookup } from "./geo";
+} from "../../../src/geo/index";
+import { mediaForFeature, mediaKindLabel } from "../../../src/domain/subdivisionMedia";
+import { visibleTinyMarkerItems } from "../../../src/map/QuizMap";
+import type { CountryRegionLookup } from "../../../src/geo/topologyTypes";
 import type {
   SubdivisionFeature,
   SubdivisionMediaData,
   SubdivisionMediaLookup,
-} from "./types";
+} from "../../../src/domain/types";
 
 const allFeatures = loadAdmin1Topology(
   topology,

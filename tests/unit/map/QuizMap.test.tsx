@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import QuizMap from "./QuizMap";
-import type { Scope, SubdivisionFeature } from "./types";
+import QuizMap from "../../../src/map/QuizMap";
+import type { Scope, SubdivisionFeature } from "../../../src/domain/types";
 
 const countryScope: Scope = { kind: "country", value: "TST" };
 

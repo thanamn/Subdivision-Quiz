@@ -4,17 +4,17 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import { StrictMode } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import topology from "../public/data/admin1.topo.json";
-import countryRegions from "../public/data/country-regions.json";
-import subdivisionMedia from "../public/data/subdivision-media.json";
-import App from "./App";
-import { loadAdmin1Topology } from "./geo";
-import type { CountryRegionLookup } from "./geo";
+import topology from "../../public/data/admin1.topo.json";
+import countryRegions from "../../public/data/country-regions.json";
+import subdivisionMedia from "../../public/data/subdivision-media.json";
+import App from "../../src/app/App";
+import { loadAdmin1Topology } from "../../src/geo/topology";
+import type { CountryRegionLookup } from "../../src/geo/topologyTypes";
 import type {
   SubdivisionFeature,
   SubdivisionMediaData,
   SubdivisionMediaLookup,
-} from "./types";
+} from "../../src/domain/types";
 
 type MockQuizMapProps = {
   activeId: string | null;
@@ -29,7 +29,7 @@ type MockQuizMapProps = {
   wrongIds?: Set<string>;
 };
 
-vi.mock("./QuizMap", () => ({
+vi.mock("../../src/map/QuizMap", () => ({
   default: function MockQuizMap({
     activeId,
     clickable = false,
