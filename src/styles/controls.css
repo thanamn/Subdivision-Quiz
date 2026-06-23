@@ -19,17 +19,12 @@
 }
 
 .control-group-label {
-  align-self: center;
   color: #68777e;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-.scope-group-label {
-  padding-bottom: 12px;
 }
 
 .header-scope-strip .select-control {
@@ -43,6 +38,13 @@
 
 .header-scope-strip .quiz-mode-switch {
   min-width: 156px;
+}
+
+.scope-button-group {
+  display: grid;
+  align-self: end;
+  min-width: 98px;
+  gap: 5px;
 }
 
 .scope-button {
@@ -97,8 +99,9 @@
   min-width: 180px;
   gap: 5px;
   color: #5d6a70;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 

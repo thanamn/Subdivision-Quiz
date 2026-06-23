@@ -110,14 +110,11 @@
 
   .select-control,
   .country-select,
+  .scope-button-group,
   .quiz-mode-switch {
     width: 100%;
     min-width: 0;
     flex: 0 1 auto;
-  }
-
-  .scope-group-label {
-    padding-bottom: 0;
   }
 
   .header-scope-strip .country-select {
@@ -169,6 +166,15 @@
 
   .find-prompt {
     align-items: start;
+  }
+
+  .subdivision-media.is-small {
+    width: 96px;
+  }
+
+  .subdivision-media.is-small img {
+    max-width: 90px;
+    max-height: 54px;
   }
 
   .find-prompt strong {

@@ -40,15 +40,17 @@ export function ScopePicker({
 }) {
   return (
     <div className="scope-strip header-scope-strip">
-      <span className="control-group-label scope-group-label">Quiz scope</span>
-      <button
-        type="button"
-        className={scope.kind === "world" ? "scope-button is-active" : "scope-button"}
-        onClick={() => setScope({ kind: "world", value: "world" })}
-      >
-        <Globe2 size={17} aria-hidden="true" />
-        World
-      </button>
+      <div className="scope-button-group" role="group" aria-label="Quiz scope">
+        <span className="control-group-label">Quiz scope</span>
+        <button
+          type="button"
+          className={scope.kind === "world" ? "scope-button is-active" : "scope-button"}
+          onClick={() => setScope({ kind: "world", value: "world" })}
+        >
+          <Globe2 size={17} aria-hidden="true" />
+          World
+        </button>
+      </div>
 
       <label className="select-control">
         <span>Region</span>

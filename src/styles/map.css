@@ -38,11 +38,8 @@
 }
 
 .subdivision.is-missed {
-  fill: #efb59f;
-}
-
-.map-shell.is-multi-country .subdivision.is-missed {
-  fill: color-mix(in srgb, var(--found-fill, #0f8b8d) 42%, #efb59f);
+  fill: var(--found-fill, #0f8b8d);
+  filter: saturate(0.15) brightness(0.9);
 }
 
 .subdivision.is-wrong {
@@ -52,6 +49,11 @@
 .subdivision:hover,
 .subdivision.is-active {
   filter: brightness(0.94) saturate(1.08);
+}
+
+.subdivision.is-missed:hover,
+.subdivision.is-missed.is-active {
+  filter: saturate(0.15) brightness(0.9) brightness(0.94) saturate(1.08);
 }
 
 .tiny-marker {
@@ -75,11 +77,8 @@
 }
 
 .tiny-marker.is-missed {
-  fill: #efb59f;
-}
-
-.map-shell.is-multi-country .tiny-marker.is-missed {
-  fill: color-mix(in srgb, var(--found-fill, #0f8b8d) 42%, #efb59f);
+  fill: var(--found-fill, #0f8b8d);
+  filter: saturate(0.15) brightness(0.9);
 }
 
 .tiny-marker.is-wrong {
@@ -89,9 +88,15 @@
 
 .tiny-marker:hover,
 .tiny-marker.is-active {
+  filter: brightness(0.94) saturate(1.08);
   opacity: 1;
   stroke: #172126;
   stroke-width: 3;
+}
+
+.tiny-marker.is-missed:hover,
+.tiny-marker.is-missed.is-active {
+  filter: saturate(0.15) brightness(0.9) brightness(0.94) saturate(1.08);
 }
 
 .zoom-controls {
