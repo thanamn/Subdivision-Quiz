@@ -45,8 +45,8 @@
 
 .subdivision.is-wrong {
   fill: #f2c1b3;
-  stroke: #b63724;
-  stroke-width: 1;
+  stroke: rgba(255, 255, 255, 0.84);
+  stroke-width: 0.9;
 }
 
 .subdivision:hover,
@@ -154,15 +154,16 @@
   animation: wrong-overlay-pulse 520ms ease-out;
 }
 
-.wrong-flash-shape,
-.wrong-flash-marker {
+.wrong-flash-shape {
   fill: rgba(182, 55, 36, 0.28);
-  stroke: #b63724;
+  stroke: rgba(255, 255, 255, 0.86);
   stroke-width: 1.8;
   vector-effect: non-scaling-stroke;
 }
 
 .wrong-flash-marker {
   fill: rgba(182, 55, 36, 0.34);
+  stroke: #b63724;
   stroke-width: 2.6;
+  vector-effect: non-scaling-stroke;
 }

@@ -6,3 +6,5 @@ dist/
 data/raw/
 qa-*.png
 .vite-dev.*.log
+src.zip
+output/
