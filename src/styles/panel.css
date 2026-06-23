@@ -65,7 +65,8 @@
 
 .subdivision-media {
   display: grid;
-  gap: 6px;
+  justify-items: center;
+  gap: 4px;
   margin: 0;
   min-width: 0;
 }
@@ -74,18 +75,20 @@
   display: block;
   max-width: 100%;
   object-fit: contain;
-  border: 1px solid #d9e0df;
-  border-radius: 6px;
+  border: 1px solid #cbd6d5;
+  border-radius: 3px;
   background: #ffffff;
 }
 
 .subdivision-media.is-small {
-  width: 58px;
+  width: 104px;
 }
 
 .subdivision-media.is-small img {
-  width: 58px;
-  height: 38px;
+  width: auto;
+  max-width: 74px;
+  height: auto;
+  max-height: 42px;
 }
 
 .subdivision-media.is-large {
@@ -94,20 +97,30 @@
 
 .subdivision-media.is-large img {
   width: 100%;
+  height: auto;
   max-height: 132px;
 }
 
 .subdivision-media figcaption {
-  display: grid;
-  gap: 2px;
+  max-width: 100%;
   color: #526269;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   line-height: 1.25;
+  text-align: center;
+}
+
+.subdivision-media.is-small figcaption {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .subdivision-media figcaption a {
   min-width: 0;
+  color: inherit;
   overflow-wrap: anywhere;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
 .find-prompt div {
@@ -143,45 +156,6 @@
 .find-prompt small {
   color: #8b3b2c;
   font-size: 0.84rem;
-}
-
-.find-side-card {
-  padding-bottom: 12px;
-  border-bottom: 1px solid #d9e0df;
-}
-
-.find-target-card {
-  display: grid;
-  gap: 3px;
-  padding: 10px;
-  border: 1px solid #cbd6d5;
-  border-left: 3px solid #0f8b8d;
-  border-radius: 8px;
-  background: #f8fbfb;
-}
-
-.find-target-card .prompt-label {
-  color: #68777e;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.find-target-card strong,
-.find-target-card span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.find-target-card strong {
-  color: #172126;
-  line-height: 1.15;
-}
-
-.find-target-card span {
-  color: #526269;
-  line-height: 1.25;
 }
 
 .find-tried-list {
@@ -267,12 +241,12 @@
   display: grid;
   width: 100%;
   min-width: 0;
-  gap: 2px;
+  gap: 1px;
   border: 1px solid #d9e0df;
   border-radius: 8px;
   background: #ffffff;
   color: #172126;
-  padding: 8px 9px;
+  padding: 6px 8px;
   text-align: left;
 }
 
@@ -298,6 +272,17 @@
   font-size: 0.82rem;
 }
 
+.answer-list .country-name {
+  color: #7a878c;
+  font-size: 0.76rem;
+}
+
+.answer-list .secondary-name {
+  color: #526269;
+  font-size: 0.84rem;
+  line-height: 1.2;
+}
+
 .resolver-list .native-name,
 .answer-list .native-name {
   color: #23353d;
@@ -319,7 +304,28 @@
 }
 
 .panel-actions.find-actions {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 3fr) minmax(170px, 1.35fr);
+  align-items: stretch;
+}
+
+.panel-actions.find-actions .quiz-action-group,
+.panel-actions.find-actions .session-action-group {
+  display: grid;
+  gap: 8px;
+}
+
+.panel-actions.find-actions .quiz-action-group {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.panel-actions.find-actions .session-action-group {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-left: 8px;
+  border-left: 1px solid #d9e0df;
+}
+
+.panel-actions.find-actions button {
+  width: 100%;
 }
 
 .panel-actions .danger-action {
@@ -379,14 +385,14 @@
 
 .answer-list {
   display: grid;
-  max-height: 280px;
+  max-height: 240px;
   overflow: auto;
   gap: 6px;
   padding-right: 2px;
 }
 
 .answer-list.compact {
-  max-height: 186px;
+  max-height: 146px;
 }
 
 .answer-list p {
@@ -400,7 +406,7 @@
   align-items: center;
   gap: 7px;
   color: #68777e;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
 }
 
 .error-panel {

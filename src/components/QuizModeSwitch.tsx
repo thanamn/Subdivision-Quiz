@@ -10,6 +10,7 @@ export function QuizModeSwitch({
 }) {
   return (
     <div className="quiz-mode-switch" role="group" aria-label="Quiz mode">
+      <span className="control-group-label">Mode</span>
       <button
         type="button"
         className={quizMode === "type" ? "is-active" : ""}
@@ -24,7 +25,7 @@ export function QuizModeSwitch({
         onClick={() => setQuizMode("find")}
       >
         <MousePointer2 size={17} aria-hidden="true" />
-        Find
+        Click
       </button>
     </div>
   );

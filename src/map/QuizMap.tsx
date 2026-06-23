@@ -121,9 +121,13 @@ function QuizMap({
     tinyMarkerData,
     effectiveTinyMarkersVisible,
   );
+  const isMultiCountryMap = useMemo(
+    () => new Set(features.map((feature) => feature.properties.countryCode)).size > 1,
+    [features],
+  );
   const tinyMarkerToggleLabel = hasOptionalTinyMarkers
     ? forceTinyMarkers
-      ? "Tiny places are clickable in Find mode"
+      ? "Small subdivisions use clickable dots in Click mode"
       : tinyMarkersVisible
       ? "Hide tiny places"
       : "Show tiny places"
@@ -301,7 +305,7 @@ function QuizMap({
   }, [onHover]);
 
   return (
-    <div className="map-shell">
+    <div className={isMultiCountryMap ? "map-shell is-multi-country" : "map-shell"}>
       <svg
         ref={svgRef}
         className="quiz-map"

@@ -1,16 +1,13 @@
 import { Timer } from "lucide-react";
 import type { QuizMode } from "../quiz/quizTypes";
-import type { SubdivisionFeature, SubdivisionMedia } from "../domain/types";
+import type { SubdivisionFeature } from "../domain/types";
 import { CompletedList } from "./CompletedList";
-import { CurrentTargetCard } from "./CurrentTargetCard";
 import { RecentList } from "./RecentList";
+import { WrongClickList } from "./WrongClickList";
 
 export function SidePanel({
   complete,
   completedReviewFeatures,
-  currentTargetMedia,
-  findPromptDetail,
-  findPromptTitle,
   gaveUp,
   missingFeatures,
   quizMode,
@@ -20,9 +17,6 @@ export function SidePanel({
 }: {
   complete: boolean;
   completedReviewFeatures: SubdivisionFeature[];
-  currentTargetMedia: SubdivisionMedia | undefined;
-  findPromptDetail: string;
-  findPromptTitle: string;
   gaveUp: boolean;
   missingFeatures: SubdivisionFeature[];
   quizMode: QuizMode;
@@ -32,14 +26,13 @@ export function SidePanel({
 }) {
   return (
     <aside className="side-panel">
-      {quizMode === "find" ? (
-        <CurrentTargetCard
-          currentTargetMedia={currentTargetMedia}
-          findPromptDetail={findPromptDetail}
-          findPromptTitle={findPromptTitle}
-          setActiveId={setActiveId}
-          wrongClickFeatures={wrongClickFeatures}
-        />
+      {quizMode === "find" && wrongClickFeatures.length ? (
+        <section className="answer-section">
+          <WrongClickList
+            setActiveId={setActiveId}
+            wrongClickFeatures={wrongClickFeatures}
+          />
+        </section>
       ) : null}
 
       <RecentList recent={recent} setActiveId={setActiveId} />

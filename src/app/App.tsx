@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { promptNames } from "../domain/featureNames";
 import type { MatchMode, QuizMode } from "../quiz/quizTypes";
 import { EMPTY_FIND_STATS } from "../quiz/quizTypes";
@@ -259,7 +259,7 @@ export default function App() {
   });
   const prompt = promptNames(findQuiz.currentTarget);
   const currentTargetMedia = mediaForFeature(findQuiz.currentTarget, subdivisionMediaLookup);
-  const findPromptTitle = gaveUp ? "Gave up" : complete ? "Complete" : prompt.primary;
+  const findPromptTitle = gaveUp ? "Quiz ended" : complete ? "Complete" : prompt.primary;
   const findPromptDetail = gaveUp
     ? "The remaining subdivisions are revealed on the map and in Missing."
     : complete
@@ -310,7 +310,7 @@ export default function App() {
       setNotice(
         sourceSupplementalNameCount
           ? quizMode === "find"
-            ? `Find mode ready for ${label}.`
+            ? `Click mode ready for ${label}.`
             : `Ready for ${label}.`
           : `Ready for ${label}. No local or native names are available in the source data.`,
       );
@@ -483,7 +483,7 @@ export default function App() {
       return;
     }
 
-    setNotice("Gave up. Missing answers are revealed.");
+    setNotice("Quiz ended. Missing answers are revealed.");
   }
 
   async function shareResult() {
@@ -541,7 +541,57 @@ export default function App() {
     setCountryHighlightIndex(0);
   }
 
-  function handleCountrySearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+  useEffect(() => {
+    function targetIsTypingField(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      return Boolean(
+        target.closest("input, textarea, select, [contenteditable='true']"),
+      );
+    }
+
+    function handleShortcut(event: globalThis.KeyboardEvent) {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+
+      if (event.key === "Escape" && countrySearchOpen) {
+        event.preventDefault();
+        setCountrySearchOpen(false);
+        setCountrySearch("");
+        return;
+      }
+
+      if (quizMode !== "find" || targetIsTypingField(event.target)) {
+        return;
+      }
+
+      const shortcut = event.key.toLowerCase();
+      if (shortcut === "h") {
+        event.preventDefault();
+        findQuiz.requestHint();
+      } else if (shortcut === "s") {
+        event.preventDefault();
+        findQuiz.skipFindTarget();
+      } else if (shortcut === "a") {
+        event.preventDefault();
+        findQuiz.revealFindTarget();
+      }
+    }
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [
+    countrySearchOpen,
+    findQuiz.requestHint,
+    findQuiz.revealFindTarget,
+    findQuiz.skipFindTarget,
+    quizMode,
+  ]);
+
+  function handleCountrySearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setCountrySearchOpen(true);
@@ -698,9 +748,6 @@ export default function App() {
         <SidePanel
           complete={complete}
           completedReviewFeatures={completedReviewFeatures}
-          currentTargetMedia={currentTargetMedia}
-          findPromptDetail={findPromptDetail}
-          findPromptTitle={findPromptTitle}
           gaveUp={gaveUp}
           missingFeatures={missingFeatures}
           quizMode={quizMode}

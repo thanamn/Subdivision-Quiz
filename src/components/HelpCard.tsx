@@ -13,10 +13,12 @@ export function HelpCard({ dismissHelpCard }: { dismissHelpCard: () => void }) {
         <ul>
           <li>Type mode accepts English, local, romanized, or native-script names.</li>
           <li>
-            Find mode gives you a name, plus a flag or emblem when available.
+            Click mode gives you a name, plus a flag or emblem when available.
           </li>
+          <li>Small subdivisions may appear as clickable dots when they are hard to select at the current zoom.</li>
           <li>Wrong clicks reveal what you clicked and count against accuracy.</li>
           <li>Hints draw a shrinking search area without centering the answer.</li>
+          <li>Shortcuts in Click mode: H for hint, S to skip, A to show the answer.</li>
           <li>Your progress saves automatically; Reset starts this quiz over.</li>
         </ul>
       </div>

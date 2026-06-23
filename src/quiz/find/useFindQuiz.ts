@@ -77,7 +77,7 @@ export function useFindQuiz({
     setFindDeferredIds(new Set());
     setHintLevel(0);
     setActiveId(null);
-    setNotice("Gave up. The remaining subdivisions are revealed.");
+    setNotice("Quiz ended. The remaining subdivisions are revealed.");
   }, [setActiveId, setNotice]);
 
   useEffect(() => {
@@ -226,7 +226,7 @@ export function useFindQuiz({
 
     startQuizTimer();
     if (hintLevel >= MAX_FIND_HINTS) {
-      setNotice("The search area is as tight as it gets. Reveal is available.");
+      setNotice("The search area is as tight as it gets. Show answer is available.");
       return;
     }
 
@@ -279,7 +279,7 @@ export function useFindQuiz({
     setHintLevel(0);
     setFindTargetId(null);
     setActiveId(null);
-    setNotice("Skipped for now. It can come back later.");
+    setNotice(`Skipped ${featureShortName(currentTarget)} for now. It can come back later.`);
   }, [
     complete,
     currentTarget,
