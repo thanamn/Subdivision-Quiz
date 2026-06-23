@@ -13,11 +13,6 @@ export function SubdivisionMediaPreview({
   }
 
   const label = mediaKindLabel(media);
-  const compactCredit = media.attributionRequired
-    ? [label, media.credit || media.artist || media.licenseShortName || "Wikimedia Commons"]
-        .filter(Boolean)
-        .join(" · ")
-    : `${label} · Wikimedia Commons`;
   const creditDetail = [
     label,
     "Wikimedia Commons",
@@ -30,17 +25,21 @@ export function SubdivisionMediaPreview({
 
   return (
     <figure className={`subdivision-media is-${size}`}>
-      <img
-        src={media.imageUrl}
-        alt={`${label} for current subdivision`}
-        loading="lazy"
-        decoding="async"
-      />
-      <figcaption title={creditDetail}>
-        <a href={media.commonsUrl} target="_blank" rel="noreferrer">
-          {compactCredit}
-        </a>
-      </figcaption>
+      <a
+        className="subdivision-media-link"
+        href={media.commonsUrl}
+        target="_blank"
+        rel="noreferrer"
+        title={creditDetail}
+        aria-label={`${creditDetail}. Opens Wikimedia Commons.`}
+      >
+        <img
+          src={media.imageUrl}
+          alt={`${label} for current subdivision`}
+          loading="lazy"
+          decoding="async"
+        />
+      </a>
     </figure>
   );
 }

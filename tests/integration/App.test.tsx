@@ -416,9 +416,11 @@ describe("App Find mode", () => {
     await renderLoaded("/?country=JPN&mode=find");
 
     await screen.findByText("Click this subdivision");
-    expect(screen.getByTestId("quiz-map")).toHaveAttribute(
-      "data-current-target-id",
-      hokkaido.properties.id,
+    await waitFor(() =>
+      expect(screen.getByTestId("quiz-map")).toHaveAttribute(
+        "data-current-target-id",
+        hokkaido.properties.id,
+      ),
     );
     expect(screen.getAllByText("北海道").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Hokkaidō").length).toBeGreaterThan(0);

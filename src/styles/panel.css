@@ -51,9 +51,9 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 11px;
-  min-height: 58px;
-  padding: 8px 12px;
+  gap: 14px;
+  min-height: 76px;
+  padding: 10px 14px;
   border: 2px solid #0f8b8d;
   border-radius: 8px;
   background: #ffffff;
@@ -66,9 +66,20 @@
 .subdivision-media {
   display: grid;
   justify-items: center;
-  gap: 4px;
   margin: 0;
   min-width: 0;
+}
+
+.subdivision-media-link {
+  display: inline-grid;
+  justify-items: center;
+  min-width: 0;
+  border-radius: 4px;
+}
+
+.subdivision-media-link:focus-visible {
+  outline: 3px solid rgba(15, 139, 141, 0.22);
+  outline-offset: 3px;
 }
 
 .subdivision-media img {
@@ -81,14 +92,14 @@
 }
 
 .subdivision-media.is-small {
-  width: 104px;
+  width: 132px;
 }
 
 .subdivision-media.is-small img {
   width: auto;
-  max-width: 74px;
+  max-width: 120px;
   height: auto;
-  max-height: 42px;
+  max-height: 72px;
 }
 
 .subdivision-media.is-large {
@@ -99,28 +110,6 @@
   width: 100%;
   height: auto;
   max-height: 132px;
-}
-
-.subdivision-media figcaption {
-  max-width: 100%;
-  color: #526269;
-  font-size: 0.68rem;
-  line-height: 1.25;
-  text-align: center;
-}
-
-.subdivision-media.is-small figcaption {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.subdivision-media figcaption a {
-  min-width: 0;
-  color: inherit;
-  overflow-wrap: anywhere;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
 }
 
 .find-prompt div {
