@@ -40,6 +40,7 @@ export function ScopePicker({
 }) {
   return (
     <div className="scope-strip header-scope-strip">
+      <span className="control-group-label scope-group-label">Quiz scope</span>
       <button
         type="button"
         className={scope.kind === "world" ? "scope-button is-active" : "scope-button"}

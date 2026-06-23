@@ -19,7 +19,7 @@ export function FindPrompt({
         <MousePointer2 size={20} aria-hidden="true" />
       )}
       <div>
-        <span className="prompt-label">Find this subdivision</span>
+        <span className="prompt-label">Click this subdivision</span>
         <strong>{findPromptTitle}</strong>
         <span>{findPromptDetail}</span>
       </div>

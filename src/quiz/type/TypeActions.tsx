@@ -50,7 +50,7 @@ export function TypeActions({
         disabled={gaveUp || complete}
       >
         <Flag size={17} aria-hidden="true" />
-        Give up
+        End quiz
       </button>
       <button
         type="button"

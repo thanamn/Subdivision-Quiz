@@ -18,6 +18,10 @@ import type {
   RawSubdivisionFeature,
   RawTopoGeometry,
 } from "./topologyTypes";
+import {
+  applyCountryColorIndices,
+  preferredCountryColorIndex,
+} from "./countryColors";
 
 const COLOR_PALETTE_SIZE = 11;
 const LANGUAGE_FIELD_BY_CODE: Partial<Record<string, keyof RawAdmin1Properties>> = {
@@ -180,14 +184,6 @@ function naturalEarthNativeNames(
   return names;
 }
 
-function colorIndexFor(code: string) {
-  let hash = 0;
-  for (let index = 0; index < code.length; index += 1) {
-    hash = (hash * 31 + code.charCodeAt(index)) >>> 0;
-  }
-  return hash % COLOR_PALETTE_SIZE;
-}
-
 function toSubdivisionFeature(
   feature: RawSubdivisionFeature,
   index: number,
@@ -252,7 +248,7 @@ function toSubdivisionFeature(
     longitude: raw.longitude,
     latitude: raw.latitude,
     aliases,
-    colorIndex: colorIndexFor(countryCode),
+    colorIndex: preferredCountryColorIndex(countryCode, COLOR_PALETTE_SIZE),
   };
 
   return {
@@ -288,9 +284,11 @@ export function loadAdmin1Topology(
     collection.features as RawSubdivisionFeature[],
   );
 
-  return features
+  const subdivisionFeatures = features
     .map((item, index) =>
       toSubdivisionFeature(item, index, countryRegions),
     )
     .filter((item): item is SubdivisionFeature => Boolean(item));
+
+  return applyCountryColorIndices(subdivisionFeatures, COLOR_PALETTE_SIZE);
 }

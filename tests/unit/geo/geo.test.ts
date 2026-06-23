@@ -6,10 +6,12 @@ import {
   buildNameIndex,
   buildCountrySummaries,
   buildRegionSummaries,
+  assignCountryColorIndices,
   byCountryThenName,
   featureInScope,
   loadAdmin1Topology,
   normalizeGuess,
+  preferredCountryColorIndex,
   scopeKey,
   scopeLabel,
 } from "../../../src/geo/index";
@@ -50,6 +52,21 @@ function countryNamesFor(
   return (index.get(normalizeGuess(answer)) || [])
     .map((feature) => `${feature.properties.country}: ${feature.properties.name}`)
     .sort();
+}
+
+function featureWithAliases(
+  feature: SubdivisionFeature,
+  aliases: string[],
+  metadata: Partial<SubdivisionFeature["properties"]> = {},
+): SubdivisionFeature {
+  return {
+    ...feature,
+    properties: {
+      ...feature.properties,
+      ...metadata,
+      aliases,
+    },
+  };
 }
 
 describe("normalizeGuess", () => {
@@ -139,6 +156,39 @@ describe("buildNameIndex", () => {
     expect(namesFor(usaIndex, "California")).toEqual(["California"]);
     expect(namesFor(usaIndex, "CA")).toEqual([]);
     expect(namesFor(usaIndex, "N.D.")).toEqual([]);
+  });
+
+  it("rejects postal and ISO-like code aliases without dropping real names", () => {
+    const california = featuresFor("USA").find(
+      (feature) => feature.properties.name === "California",
+    );
+    const mexicoCity = featuresFor("MEX").find(
+      (feature) => feature.properties.name === "Mexico City",
+    );
+    expect(california).toBeTruthy();
+    expect(mexicoCity).toBeTruthy();
+
+    const index = buildNameIndex([
+      featureWithAliases(
+        california!,
+        ["California", "CA", "US-CA"],
+        { code: "US-CA", postal: "CA" },
+      ),
+      featureWithAliases(
+        mexicoCity!,
+        ["Mexico City", "CDMX", "DF", "MX-CMX", "CMX"],
+        { code: "MX-CMX", postal: "DF" },
+      ),
+    ]);
+
+    expect(namesFor(index, "California")).toEqual(["California"]);
+    expect(namesFor(index, "Mexico City")).toEqual(["Mexico City"]);
+    expect(namesFor(index, "CDMX")).toEqual(["Mexico City"]);
+    expect(namesFor(index, "CA")).toEqual([]);
+    expect(namesFor(index, "US-CA")).toEqual([]);
+    expect(namesFor(index, "DF")).toEqual([]);
+    expect(namesFor(index, "MX-CMX")).toEqual([]);
+    expect(namesFor(index, "CMX")).toEqual([]);
   });
 
   it("keeps corrected Denmark names without accepting the country name", () => {
@@ -284,6 +334,27 @@ describe("buildNameIndex", () => {
       "Southern Denmark",
       "Zealand",
     ]);
+  });
+});
+
+describe("country color assignment", () => {
+  it("chooses different palette slots for adjacent countries when possible", () => {
+    const adjacency = new Map([
+      ["AAA", new Set(["BBB", "CCC"])],
+      ["BBB", new Set(["AAA", "CCC"])],
+      ["CCC", new Set(["AAA", "BBB"])],
+      ["DDD", new Set<string>()],
+    ]);
+    const colors = assignCountryColorIndices(
+      ["AAA", "BBB", "CCC", "DDD"],
+      adjacency,
+      3,
+    );
+
+    expect(colors.get("AAA")).not.toBe(colors.get("BBB"));
+    expect(colors.get("AAA")).not.toBe(colors.get("CCC"));
+    expect(colors.get("BBB")).not.toBe(colors.get("CCC"));
+    expect(colors.get("DDD")).toBe(preferredCountryColorIndex("DDD", 3));
   });
 });
 

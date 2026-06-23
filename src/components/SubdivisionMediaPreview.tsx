@@ -13,25 +13,34 @@ export function SubdivisionMediaPreview({
   }
 
   const label = mediaKindLabel(media);
-  const creditText = media.licenseShortName
-    ? `Wikimedia Commons (${media.licenseShortName})`
-    : "Wikimedia Commons";
+  const compactCredit = media.attributionRequired
+    ? [label, media.credit || media.artist || media.licenseShortName || "Wikimedia Commons"]
+        .filter(Boolean)
+        .join(" · ")
+    : `${label} · Wikimedia Commons`;
+  const creditDetail = [
+    label,
+    "Wikimedia Commons",
+    media.credit,
+    media.artist,
+    media.licenseShortName,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <figure className={`subdivision-media is-${size}`}>
       <img
         src={media.imageUrl}
-        alt={`${label} for the current subdivision`}
+        alt={`${label} for current subdivision`}
         loading="lazy"
         decoding="async"
       />
-      {size === "large" ? (
-        <figcaption>
-          <a href={media.commonsUrl} target="_blank" rel="noreferrer">
-            {creditText}
-          </a>
-        </figcaption>
-      ) : null}
+      <figcaption title={creditDetail}>
+        <a href={media.commonsUrl} target="_blank" rel="noreferrer">
+          {compactCredit}
+        </a>
+      </figcaption>
     </figure>
   );
 }

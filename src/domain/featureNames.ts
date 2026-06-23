@@ -17,17 +17,21 @@ function prefersCanonicalPromptName(feature: SubdivisionFeature) {
 }
 
 export function featureShortName(feature: SubdivisionFeature) {
-  if (prefersCanonicalPromptName(feature)) {
-    return feature.properties.name;
-  }
+  return feature.properties.name;
+}
 
-  const local = localNameText(feature);
-  const native = nativeNameText(feature);
-  const secondary = [local, native].find(
-    (name) => name && normalizeGuess(name) !== normalizeGuess(feature.properties.name),
+export function compactSecondaryName(feature: SubdivisionFeature) {
+  const primaryNormalized = normalizeGuess(feature.properties.name);
+  const candidates = [
+    ...feature.properties.localNames,
+    ...feature.properties.nativeNames
+      .filter((nativeName) => nativeName.display !== false)
+      .map((nativeName) => nativeName.name),
+  ];
+
+  return candidates.find(
+    (name) => name && normalizeGuess(name) !== primaryNormalized,
   );
-
-  return secondary ? `${secondary} / ${feature.properties.name}` : feature.properties.name;
 }
 
 export function promptNames(feature: SubdivisionFeature | undefined) {
@@ -44,13 +48,10 @@ export function promptNames(feature: SubdivisionFeature | undefined) {
   );
   const native = displayNativeNames[0]?.name;
   const prefersCanonicalName = prefersCanonicalPromptName(feature);
-  const primary = prefersCanonicalName
-    ? feature.properties.name
-    : native || local || feature.properties.name;
+  const primary = feature.properties.name;
   const secondary = [
-    prefersCanonicalName ? undefined : feature.properties.name,
-    local,
-    native,
+    prefersCanonicalName ? local : local || native,
+    prefersCanonicalName ? native : native && native !== local ? native : undefined,
     ...feature.properties.localNames.slice(1),
     ...displayNativeNames.slice(1).map((nativeName) => nativeName.name),
   ]

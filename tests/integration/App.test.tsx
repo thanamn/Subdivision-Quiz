@@ -245,7 +245,7 @@ describe("App loading and shell", () => {
     await renderLoaded("/?country=jpn");
 
     await screen.findByRole("heading", { level: 2, name: "Japan" });
-    expect(screen.getByRole("button", { name: "Find" })).toHaveClass("is-active");
+    expect(screen.getByRole("button", { name: "Click" })).toHaveClass("is-active");
     expect(window.location.search).toBe("?country=JPN&mode=find");
   });
 
@@ -253,10 +253,10 @@ describe("App loading and shell", () => {
     const user = userEvent.setup();
     await renderLoaded("/?country=JPN&mode=type");
 
-    await user.click(screen.getByRole("button", { name: "Find" }));
+    await user.click(screen.getByRole("button", { name: "Click" }));
 
-    expect(screen.getByRole("button", { name: "Find" })).toHaveClass("is-active");
-    expect(screen.getByText("Find this subdivision")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Click" })).toHaveClass("is-active");
+    expect(screen.getByText("Click this subdivision")).toBeInTheDocument();
     expect(window.localStorage.getItem(QUIZ_MODE_KEY)).toBe("find");
     expect(window.location.search).toBe("?country=JPN&mode=find");
 
@@ -301,7 +301,7 @@ describe("App loading and shell", () => {
     expect(metricValue("time")).toBe("0:00");
     expect(document.querySelector(".metric-row")).not.toHaveTextContent("wrong");
 
-    await user.click(screen.getByRole("button", { name: "Find" }));
+    await user.click(screen.getByRole("button", { name: "Click" }));
 
     expect(metricValue("done")).toBe("0");
     expect(metricValue("left")).toBe(String(featuresFor("MEX").length));
@@ -315,6 +315,11 @@ describe("App loading and shell", () => {
     await renderLoaded("/");
 
     expect(screen.getByLabelText("How to play")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Small subdivisions may appear as clickable dots when they are hard to select at the current zoom.",
+      ),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByTitle("Dismiss"));
 
@@ -401,7 +406,7 @@ describe("App Find mode", () => {
 
     await waitForFeatureCount(47);
     expect(
-      (await screen.findAllByAltText("Flag for the current subdivision")).length,
+      (await screen.findAllByAltText("Flag for current subdivision")).length,
     ).toBeGreaterThan(0);
   });
 
@@ -410,7 +415,7 @@ describe("App Find mode", () => {
 
     await renderLoaded("/?country=JPN&mode=find");
 
-    await screen.findByText("Find this subdivision");
+    await screen.findByText("Click this subdivision");
     expect(screen.getByTestId("quiz-map")).toHaveAttribute(
       "data-current-target-id",
       hokkaido.properties.id,
@@ -418,7 +423,7 @@ describe("App Find mode", () => {
     expect(screen.getAllByText("北海道").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Hokkaidō").length).toBeGreaterThan(0);
     expect(
-      (await screen.findAllByAltText("Flag for the current subdivision")).length,
+      (await screen.findAllByAltText("Flag for current subdivision")).length,
     ).toBeGreaterThan(0);
   });
 
@@ -452,7 +457,7 @@ describe("App Find mode", () => {
     expect(screen.getByTestId(`mock-map-feature-${wrong!.properties.id}`)).toHaveClass(
       "is-wrong",
     );
-    expect(screen.getByText("Tried clicks")).toBeInTheDocument();
+    expect(screen.getByText("Wrong clicks")).toBeInTheDocument();
     expect(screen.getAllByText(wrong!.properties.name).length).toBeGreaterThan(0);
   });
 
@@ -477,7 +482,7 @@ describe("App Find mode", () => {
     const user = userEvent.setup();
     await renderLoaded("/?country=JPN&mode=find");
 
-    await user.click(screen.getByRole("button", { name: "Reveal" }));
+    await user.click(screen.getByRole("button", { name: "Show answer" }));
 
     expect(screen.getByText(/^Revealed:/)).toBeInTheDocument();
     expect(metricValue("done")).toBe("1");
@@ -502,7 +507,7 @@ describe("App Find mode", () => {
 
     await user.click(screen.getByRole("button", { name: "Skip" }));
 
-    expect(screen.getByText("Skipped for now. It can come back later.")).toBeInTheDocument();
+    expect(screen.getByText("Skipped Hokkaidō for now. It can come back later.")).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByTestId("quiz-map")).not.toHaveAttribute(
         "data-current-target-id",
@@ -529,10 +534,10 @@ describe("App Find mode", () => {
     expect(window.confirm).toHaveBeenCalledWith("Restart the Japan quiz?");
     expect(screen.getByText("Progress reset.")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Give up" }));
+    await user.click(screen.getByRole("button", { name: "End quiz" }));
 
-    expect(screen.getByText("Gave up. The remaining subdivisions are revealed.")).toBeInTheDocument();
-    expect(screen.getAllByText("Gave up").length).toBeGreaterThan(0);
+    expect(screen.getByText("Quiz ended. The remaining subdivisions are revealed.")).toBeInTheDocument();
+    expect(screen.getAllByText("Quiz ended").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Missing" })).toBeInTheDocument();
   });
 });

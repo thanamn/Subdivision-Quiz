@@ -7,7 +7,7 @@
 }
 
 .quiz-bar.is-find-mode {
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.55fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .quiz-bar .mode-row,
@@ -35,5 +35,5 @@
 }
 
 .quiz-bar.is-find-mode .find-actions {
-  grid-column: 2;
+  grid-column: 1;
 }

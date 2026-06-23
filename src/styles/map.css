@@ -41,6 +41,10 @@
   fill: #efb59f;
 }
 
+.map-shell.is-multi-country .subdivision.is-missed {
+  fill: color-mix(in srgb, var(--found-fill, #0f8b8d) 42%, #efb59f);
+}
+
 .subdivision.is-wrong {
   fill: #f2c1b3;
 }
@@ -72,6 +76,10 @@
 
 .tiny-marker.is-missed {
   fill: #efb59f;
+}
+
+.map-shell.is-multi-country .tiny-marker.is-missed {
+  fill: color-mix(in srgb, var(--found-fill, #0f8b8d) 42%, #efb59f);
 }
 
 .tiny-marker.is-wrong {

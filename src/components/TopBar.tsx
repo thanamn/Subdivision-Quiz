@@ -47,7 +47,7 @@ export function TopBar({
         <Globe2 size={28} aria-hidden="true" />
         <div>
           <h1>Subdivision Quiz</h1>
-          <p>Name subdivisions or find them on the map.</p>
+          <p>Name subdivisions or click them on the map.</p>
         </div>
       </div>
 
