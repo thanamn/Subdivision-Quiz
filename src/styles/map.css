@@ -38,12 +38,15 @@
 }
 
 .subdivision.is-missed {
-  fill: var(--found-fill, #0f8b8d);
-  filter: saturate(0.15) brightness(0.9);
+  fill: #f2c1b3;
+  stroke: rgba(255, 255, 255, 0.76);
+  stroke-width: 0.9;
 }
 
 .subdivision.is-wrong {
   fill: #f2c1b3;
+  stroke: #b63724;
+  stroke-width: 1;
 }
 
 .subdivision:hover,
@@ -53,7 +56,7 @@
 
 .subdivision.is-missed:hover,
 .subdivision.is-missed.is-active {
-  filter: saturate(0.15) brightness(0.9) brightness(0.94) saturate(1.08);
+  filter: brightness(0.96) saturate(1.08);
 }
 
 .tiny-marker {
@@ -77,8 +80,8 @@
 }
 
 .tiny-marker.is-missed {
-  fill: var(--found-fill, #0f8b8d);
-  filter: saturate(0.15) brightness(0.9);
+  fill: #f2c1b3;
+  stroke: #b63724;
 }
 
 .tiny-marker.is-wrong {
@@ -96,7 +99,7 @@
 
 .tiny-marker.is-missed:hover,
 .tiny-marker.is-missed.is-active {
-  filter: saturate(0.15) brightness(0.9) brightness(0.94) saturate(1.08);
+  filter: brightness(0.96) saturate(1.08);
 }
 
 .zoom-controls {
@@ -120,6 +123,28 @@
   stroke-dasharray: 10 7;
   pointer-events: none;
   vector-effect: non-scaling-stroke;
+}
+
+.country-outline-layer {
+  pointer-events: none;
+}
+
+.country-outline-halo,
+.country-outline-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.country-outline-halo {
+  stroke: rgba(255, 255, 255, 0.44);
+  stroke-width: 2.8;
+}
+
+.country-outline-line {
+  stroke: rgba(27, 40, 46, 0.46);
+  stroke-width: 1.05;
 }
 
 .wrong-flash-overlay {

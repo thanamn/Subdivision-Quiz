@@ -66,6 +66,52 @@ type CompletionState = {
   wasComplete: boolean;
 };
 
+const STANDARD_ANSWER_LIST_LIMIT = 120;
+const LARGE_SCOPE_ANSWER_LIST_LIMIT = 48;
+const LARGE_SCOPE_FEATURE_THRESHOLD = 400;
+
+function sortedFeaturePreview(
+  features: SubdivisionFeature[],
+  shouldInclude: (feature: SubdivisionFeature) => boolean,
+  limit: number,
+) {
+  if (limit <= 0) {
+    return [];
+  }
+
+  const preview: SubdivisionFeature[] = [];
+  let sorted = false;
+
+  features.forEach((feature) => {
+    if (!shouldInclude(feature)) {
+      return;
+    }
+
+    if (preview.length < limit) {
+      preview.push(feature);
+      return;
+    }
+
+    if (!sorted) {
+      preview.sort(byCountryThenName);
+      sorted = true;
+    }
+
+    const lastFeature = preview[preview.length - 1];
+    if (byCountryThenName(feature, lastFeature) >= 0) {
+      return;
+    }
+
+    const insertAt = preview.findIndex(
+      (previewFeature) => byCountryThenName(feature, previewFeature) < 0,
+    );
+    preview.splice(insertAt === -1 ? preview.length : insertAt, 0, feature);
+    preview.pop();
+  });
+
+  return sorted ? preview : preview.sort(byCountryThenName);
+}
+
 export default function App() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const completionStateRef = useRef<CompletionState>({
@@ -104,6 +150,11 @@ export default function App() {
   const [showHelpCard, setShowHelpCard] = useState(initialHelpCardOpen);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [confettiRun, setConfettiRun] = useState(0);
+  const shouldLoadSubdivisionMedia =
+    quizMode === "find" ||
+    guessed.size > 0 ||
+    revealedIds.size > 0 ||
+    recent.length > 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -135,24 +186,31 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (quizMode !== "find" || subdivisionMediaAttemptedRef.current) {
+    if (!shouldLoadSubdivisionMedia || subdivisionMediaAttemptedRef.current) {
       return undefined;
     }
 
     subdivisionMediaAttemptedRef.current = true;
     let cancelled = false;
+    let settled = false;
 
-    loadSubdivisionMedia(SUBDIVISION_MEDIA_URL).then((mediaLookup) => {
-      if (!cancelled) {
-        setSubdivisionMediaLookup(mediaLookup);
-      }
-    });
+    loadSubdivisionMedia(SUBDIVISION_MEDIA_URL)
+      .then((mediaLookup) => {
+        if (!cancelled) {
+          setSubdivisionMediaLookup(mediaLookup);
+        }
+      })
+      .finally(() => {
+        settled = true;
+      });
 
     return () => {
       cancelled = true;
-      subdivisionMediaAttemptedRef.current = false;
+      if (!settled) {
+        subdivisionMediaAttemptedRef.current = false;
+      }
     };
-  }, [quizMode]);
+  }, [shouldLoadSubdivisionMedia]);
 
   const countries = useMemo(() => buildCountrySummaries(allFeatures), [allFeatures]);
   const regions = useMemo(() => buildRegionSummaries(countries), [countries]);
@@ -202,33 +260,46 @@ export default function App() {
 
     return new Set([...guessed, ...revealedIds]);
   }, [guessed, quizMode, revealedIds]);
-  const foundFeatures = useMemo(
+  const missingCount = Math.max(0, total - completedIds.size);
+  const answerListLimit =
+    total > LARGE_SCOPE_FEATURE_THRESHOLD
+      ? LARGE_SCOPE_ANSWER_LIST_LIMIT
+      : STANDARD_ANSWER_LIST_LIMIT;
+  const missingPreviewFeatures = useMemo(
     () =>
-      activeFeatures
-        .filter((feature) => guessed.has(feature.properties.id))
-        .sort(byCountryThenName),
-    [activeFeatures, guessed],
+      sortedFeaturePreview(
+        activeFeatures,
+        (feature) => !completedIds.has(feature.properties.id),
+        answerListLimit,
+      ),
+    [activeFeatures, answerListLimit, completedIds],
   );
-  const missingFeatures = useMemo(
+  const completedReviewCount = useMemo(
     () =>
-      activeFeatures
-        .filter((feature) => !completedIds.has(feature.properties.id))
-        .sort(byCountryThenName),
-    [activeFeatures, completedIds],
+      activeFeatures.reduce((count, feature) => {
+        const id = feature.properties.id;
+        const isCompleted =
+          quizMode === "find"
+            ? guessed.has(id) || revealedIds.has(id)
+            : guessed.has(id);
+
+        return count + (isCompleted ? 1 : 0);
+      }, 0),
+    [activeFeatures, guessed, quizMode, revealedIds],
   );
-  const revealedFeatures = useMemo(
+  const completedReviewPreviewFeatures = useMemo(
     () =>
-      activeFeatures
-        .filter((feature) => revealedIds.has(feature.properties.id))
-        .sort(byCountryThenName),
-    [activeFeatures, revealedIds],
-  );
-  const completedReviewFeatures = useMemo(
-    () =>
-      quizMode === "find"
-        ? [...foundFeatures, ...revealedFeatures].sort(byCountryThenName)
-        : foundFeatures,
-    [foundFeatures, quizMode, revealedFeatures],
+      sortedFeaturePreview(
+        activeFeatures,
+        (feature) => {
+          const id = feature.properties.id;
+          return quizMode === "find"
+            ? guessed.has(id) || revealedIds.has(id)
+            : guessed.has(id);
+        },
+        answerListLimit,
+      ),
+    [activeFeatures, answerListLimit, guessed, quizMode, revealedIds],
   );
   const complete = total > 0 && completedIds.size >= total;
   const { elapsed, resetQuizTimer, setStartedAt, startQuizTimer } =
@@ -656,7 +727,7 @@ export default function App() {
             elapsed={elapsed}
             findStats={findQuiz.findStats}
             label={label}
-            missingCount={missingFeatures.length}
+            missingCount={missingCount}
             percent={percent}
             quizMode={quizMode}
             regions={regions}
@@ -747,9 +818,12 @@ export default function App() {
 
         <SidePanel
           complete={complete}
-          completedReviewFeatures={completedReviewFeatures}
+          completedReviewCount={completedReviewCount}
+          completedReviewPreviewFeatures={completedReviewPreviewFeatures}
           gaveUp={gaveUp}
-          missingFeatures={missingFeatures}
+          mediaLookup={subdivisionMediaLookup}
+          missingCount={missingCount}
+          missingPreviewFeatures={missingPreviewFeatures}
           quizMode={quizMode}
           recent={recent}
           setActiveId={setActiveId}

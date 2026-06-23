@@ -1,6 +1,18 @@
 import { mediaKindLabel } from "../domain/subdivisionMedia";
 import type { SubdivisionMedia } from "../domain/types";
 
+function mediaCreditDetail(media: SubdivisionMedia, label: string) {
+  return [
+    label,
+    "Wikimedia Commons",
+    media.credit,
+    media.artist,
+    media.licenseShortName,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function SubdivisionMediaPreview({
   media,
   size = "small",
@@ -13,15 +25,7 @@ export function SubdivisionMediaPreview({
   }
 
   const label = mediaKindLabel(media);
-  const creditDetail = [
-    label,
-    "Wikimedia Commons",
-    media.credit,
-    media.artist,
-    media.licenseShortName,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const creditDetail = mediaCreditDetail(media, label);
 
   return (
     <figure className={`subdivision-media is-${size}`}>
@@ -41,5 +45,33 @@ export function SubdivisionMediaPreview({
         />
       </a>
     </figure>
+  );
+}
+
+export function SubdivisionMediaThumbnail({
+  media,
+  name,
+}: {
+  media: SubdivisionMedia | undefined;
+  name: string;
+}) {
+  if (!media) {
+    return null;
+  }
+
+  const label = mediaKindLabel(media);
+
+  return (
+    <span
+      className="subdivision-media-thumb"
+      title={mediaCreditDetail(media, label)}
+    >
+      <img
+        src={media.imageUrl}
+        alt={`${label} for ${name}`}
+        loading="lazy"
+        decoding="async"
+      />
+    </span>
   );
 }

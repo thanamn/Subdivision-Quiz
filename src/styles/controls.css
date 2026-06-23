@@ -31,6 +31,11 @@
   min-width: 150px;
 }
 
+.header-scope-strip .region-select {
+  flex: 0 1 220px;
+  max-width: 260px;
+}
+
 .header-scope-strip .country-select {
   flex: 1 1 210px;
   max-width: 320px;
@@ -106,7 +111,7 @@
 }
 
 .select-control select,
-.country-search-input {
+.scope-search-input {
   width: 100%;
   min-height: 40px;
   border: 1px solid #cbd6d5;
@@ -121,15 +126,15 @@
   flex: 1 1 260px;
 }
 
-.country-combobox {
+.scope-combobox {
   position: relative;
 }
 
-.country-search-box {
+.scope-search-box {
   position: relative;
 }
 
-.country-search-icon {
+.scope-search-icon {
   position: absolute;
   left: 11px;
   top: 50%;
@@ -139,7 +144,7 @@
   transform: translateY(-50%);
 }
 
-.country-search-chevron {
+.scope-search-chevron {
   position: absolute;
   right: 11px;
   top: 50%;
@@ -148,19 +153,19 @@
   transform: translateY(-50%);
 }
 
-.country-search-input {
+.scope-search-input {
   padding-left: 34px;
   padding-right: 34px;
   font-weight: 600;
   text-overflow: ellipsis;
 }
 
-.country-search-input:focus {
+.scope-search-input:focus {
   border-color: #0f8b8d;
   outline: 3px solid rgba(15, 139, 141, 0.16);
 }
 
-.country-search-results {
+.scope-search-results {
   position: absolute;
   z-index: 21;
   top: calc(100% + 6px);
@@ -178,7 +183,7 @@
   text-transform: none;
 }
 
-.country-search-result {
+.scope-search-result {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -191,35 +196,35 @@
   text-align: left;
 }
 
-.country-search-result:hover,
-.country-search-result.is-active {
+.scope-search-result:hover,
+.scope-search-result.is-active {
   background: #dff1f0;
   color: #0c6264;
 }
 
-.country-search-result[aria-selected="true"] {
+.scope-search-result[aria-selected="true"] {
   font-weight: 800;
 }
 
-.country-search-result span {
+.scope-search-result span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.country-search-result small {
+.scope-search-result small {
   color: #68777e;
   font-size: 0.78rem;
 }
 
-.country-search-empty {
+.scope-search-empty {
   color: #68777e;
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: none;
 }
 
-.country-search-empty {
+.scope-search-empty {
   padding: 9px;
 }

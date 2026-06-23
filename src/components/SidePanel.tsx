@@ -1,24 +1,30 @@
 import { Timer } from "lucide-react";
 import type { QuizMode } from "../quiz/quizTypes";
-import type { SubdivisionFeature } from "../domain/types";
+import type { SubdivisionFeature, SubdivisionMediaLookup } from "../domain/types";
 import { CompletedList } from "./CompletedList";
 import { RecentList } from "./RecentList";
 import { WrongClickList } from "./WrongClickList";
 
 export function SidePanel({
   complete,
-  completedReviewFeatures,
+  completedReviewCount,
+  completedReviewPreviewFeatures,
   gaveUp,
-  missingFeatures,
+  mediaLookup,
+  missingCount,
+  missingPreviewFeatures,
   quizMode,
   recent,
   setActiveId,
   wrongClickFeatures,
 }: {
   complete: boolean;
-  completedReviewFeatures: SubdivisionFeature[];
+  completedReviewCount: number;
+  completedReviewPreviewFeatures: SubdivisionFeature[];
   gaveUp: boolean;
-  missingFeatures: SubdivisionFeature[];
+  mediaLookup: SubdivisionMediaLookup;
+  missingCount: number;
+  missingPreviewFeatures: SubdivisionFeature[];
   quizMode: QuizMode;
   recent: SubdivisionFeature[];
   setActiveId: (id: string | null) => void;
@@ -35,13 +41,20 @@ export function SidePanel({
         </section>
       ) : null}
 
-      <RecentList recent={recent} setActiveId={setActiveId} />
+      <RecentList
+        mediaLookup={mediaLookup}
+        recent={recent}
+        setActiveId={setActiveId}
+      />
 
       <CompletedList
         complete={complete}
-        completedReviewFeatures={completedReviewFeatures}
+        completedReviewCount={completedReviewCount}
+        completedReviewPreviewFeatures={completedReviewPreviewFeatures}
         gaveUp={gaveUp}
-        missingFeatures={missingFeatures}
+        mediaLookup={mediaLookup}
+        missingCount={missingCount}
+        missingPreviewFeatures={missingPreviewFeatures}
         quizMode={quizMode}
         setActiveId={setActiveId}
       />

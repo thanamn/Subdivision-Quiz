@@ -1,11 +1,13 @@
 import { ListChecks } from "lucide-react";
 import { AnswerListItems } from "./AnswerListItems";
-import type { SubdivisionFeature } from "../domain/types";
+import type { SubdivisionFeature, SubdivisionMediaLookup } from "../domain/types";
 
 export function RecentList({
+  mediaLookup,
   recent,
   setActiveId,
 }: {
+  mediaLookup: SubdivisionMediaLookup;
   recent: SubdivisionFeature[];
   setActiveId: (id: string | null) => void;
 }) {
@@ -17,7 +19,11 @@ export function RecentList({
       </div>
       <div className="answer-list compact">
         {recent.length ? (
-          <AnswerListItems features={recent} setActiveId={setActiveId} />
+          <AnswerListItems
+            features={recent}
+            mediaLookup={mediaLookup}
+            setActiveId={setActiveId}
+          />
         ) : (
           <p>No answers yet.</p>
         )}

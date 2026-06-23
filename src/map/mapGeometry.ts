@@ -1,6 +1,11 @@
 import { geoArea, geoPath } from "d3-geo";
 import { zoomIdentity } from "d3-zoom";
-import type { FeatureCollection } from "geojson";
+import type {
+  FeatureCollection,
+  Geometry,
+  MultiLineString,
+  Position,
+} from "geojson";
 import type { Scope, SubdivisionFeature } from "../domain/types";
 import {
   COLLAPSED_GEOGRAPHIC_AREA,
@@ -47,6 +52,113 @@ export function visibleTinyMarkerItems<T extends TinyMarkerVisibilityItem>(
   return showOptionalTinyMarkers
     ? markerData
     : markerData.filter((item) => item.tinyMarker?.alwaysVisible);
+}
+
+type OutlineEdge = {
+  count: number;
+  countries: Set<string>;
+  end: [number, number];
+  start: [number, number];
+};
+
+const MAX_COUNTRY_OUTLINE_SEGMENTS = 60000;
+
+function coordinateKey(point: [number, number]) {
+  return `${point[0]},${point[1]}`;
+}
+
+function edgeKey(start: [number, number], end: [number, number]) {
+  const startKey = coordinateKey(start);
+  const endKey = coordinateKey(end);
+
+  return startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
+}
+
+function coordinatePair(position: Position | unknown): [number, number] | null {
+  if (!Array.isArray(position)) {
+    return null;
+  }
+
+  const [x, y] = position;
+
+  return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+}
+
+function geometryRings(geometry: Geometry | null | undefined): Position[][] {
+  if (!geometry) {
+    return [];
+  }
+
+  if (geometry.type === "Polygon" && Array.isArray(geometry.coordinates)) {
+    return geometry.coordinates.filter(Array.isArray);
+  }
+
+  if (geometry.type === "MultiPolygon" && Array.isArray(geometry.coordinates)) {
+    return geometry.coordinates
+      .filter(Array.isArray)
+      .flat()
+      .filter(Array.isArray);
+  }
+
+  return [];
+}
+
+export function countryOutlinePathForFeatures(
+  features: SubdivisionFeature[],
+  path: ReturnType<typeof geoPath>,
+) {
+  try {
+    const edges = new Map<string, OutlineEdge>();
+
+    features.forEach((feature) => {
+      geometryRings(feature.geometry).forEach((ring) => {
+        const points = ring.map(coordinatePair);
+        if (points.some((point) => !point)) {
+          return;
+        }
+
+        for (let index = 0; index < ring.length - 1; index += 1) {
+          const start = points[index];
+          const end = points[index + 1];
+          if (!start || !end || coordinateKey(start) === coordinateKey(end)) {
+            continue;
+          }
+
+          const key = edgeKey(start, end);
+          const edge = edges.get(key) || {
+            count: 0,
+            countries: new Set<string>(),
+            end,
+            start,
+          };
+
+          edge.count += 1;
+          edge.countries.add(feature.properties.countryCode);
+          edges.set(key, edge);
+        }
+      });
+    });
+
+    const outlineSegments = Array.from(edges.values())
+      .filter((edge) => edge.count === 1 || edge.countries.size > 1)
+      .map((edge) => [edge.start, edge.end]);
+
+    if (
+      !outlineSegments.length ||
+      outlineSegments.length > MAX_COUNTRY_OUTLINE_SEGMENTS
+    ) {
+      return "";
+    }
+
+    const outline: MultiLineString = {
+      type: "MultiLineString",
+      coordinates: outlineSegments,
+    };
+
+    return path(outline) || "";
+  } catch {
+    return "";
+  }
 }
 
 function isFinitePoint(point: [number, number]) {

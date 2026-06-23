@@ -155,6 +155,47 @@ describe("QuizMap", () => {
     expect(screen.getByTestId("tiny-marker-optional-tiny")).toBeInTheDocument();
   });
 
+  it("draws country outlines only for the full reveal state", () => {
+    const { unmount } = renderMap({
+      revealedIds: new Set(["alpha"]),
+    });
+
+    expect(screen.queryByTestId("country-outline-line")).not.toBeInTheDocument();
+
+    unmount();
+
+    renderMap({
+      revealed: true,
+    });
+
+    expect(screen.getByTestId("country-outline-halo")).toBeInTheDocument();
+    expect(screen.getByTestId("country-outline-line")).toBeInTheDocument();
+  });
+
+  it("skips the expensive country outline in world reveal state", () => {
+    renderMap({
+      revealed: true,
+      scope: { kind: "world", value: "world" },
+    });
+
+    expect(screen.queryByTestId("country-outline-line")).not.toBeInTheDocument();
+  });
+
+  it("keeps helper dots above the country outline", () => {
+    renderMap({
+      features: [alpha, collapsedTiny],
+      forceTinyMarkers: true,
+      revealed: true,
+    });
+
+    const outline = screen.getByTestId("country-outline-line");
+    const marker = screen.getByTestId("tiny-marker-tiny");
+
+    expect(
+      outline.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("makes tiny markers clickable when the map is clickable", () => {
     const onFeatureClick = vi.fn();
     renderMap({

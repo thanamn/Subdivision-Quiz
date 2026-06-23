@@ -232,7 +232,7 @@ describe("App loading and shell", () => {
       screen.getByRole("heading", { level: 1, name: "Subdivision Quiz" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /World/ })).toBeInTheDocument();
-    expect(screen.getByLabelText("Region")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Region" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Country" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Quiz mode" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Type" })).toHaveClass("is-active");
@@ -288,6 +288,30 @@ describe("App loading and shell", () => {
     expect(window.location.search).toBe("?country=JPN&mode=type");
     expect(window.localStorage.getItem("subdivision-quiz:last-scope")).toBe(
       JSON.stringify({ kind: "country", value: "JPN" }),
+    );
+  });
+
+  it("opens, filters, and keyboard-selects the region search", async () => {
+    const user = userEvent.setup();
+    await renderLoaded("/");
+
+    const regionInput = screen.getByRole("combobox", { name: "Region" });
+    await user.click(regionInput);
+    await user.type(regionInput, "oce");
+
+    const listbox = screen.getByRole("listbox", { name: "Region results" });
+    expect(
+      within(listbox).getByRole("option", {
+        name: /Oceania, .* subdivisions, .* countries/,
+      }),
+    ).toBeInTheDocument();
+
+    await user.keyboard("{Enter}");
+
+    await screen.findByRole("heading", { level: 2, name: "Oceania" });
+    expect(window.location.search).toBe("?region=Oceania&mode=type");
+    expect(window.localStorage.getItem("subdivision-quiz:last-scope")).toBe(
+      JSON.stringify({ kind: "region", value: "Oceania" }),
     );
   });
 
@@ -441,6 +465,9 @@ describe("App Find mode", () => {
     expect(metricValue("left")).toBe("46");
     expect(screen.getByText("Recent")).toBeInTheDocument();
     expect(screen.getAllByText("Hokkaidō").length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(screen.getAllByAltText(`Flag for ${target.properties.name}`).length).toBeGreaterThanOrEqual(2),
+    );
   });
 
   it("wrong clicks increment wrong count, show the notice, and keep tried regions identifiable", async () => {

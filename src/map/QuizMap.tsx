@@ -16,6 +16,7 @@ import {
   WIDTH,
 } from "./mapConstants";
 import {
+  countryOutlinePathForFeatures,
   featureCollection,
   focusTransformForItem,
   hintBoxForFeature,
@@ -144,6 +145,14 @@ function QuizMap({
   const wrongFlashItem = useMemo(
     () => pathData.find((item) => item.id === wrongFlashId) || null,
     [pathData, wrongFlashId],
+  );
+  const shouldShowCountryOutline = revealed && scope.kind !== "world";
+  const countryOutlinePath = useMemo(
+    () =>
+      shouldShowCountryOutline
+        ? countryOutlinePathForFeatures(features, path)
+        : "",
+    [features, path, shouldShowCountryOutline],
   );
   const focusItem = useMemo(
     () => pathData.find((item) => item.id === focusFeatureId) || null,
@@ -328,6 +337,20 @@ function QuizMap({
             onLeave={leaveFeature}
             onMove={showTooltip}
           />
+          {countryOutlinePath ? (
+            <g className="country-outline-layer" aria-hidden="true">
+              <path
+                data-testid="country-outline-halo"
+                className="country-outline-halo"
+                d={countryOutlinePath}
+              />
+              <path
+                data-testid="country-outline-line"
+                className="country-outline-line"
+                d={countryOutlinePath}
+              />
+            </g>
+          ) : null}
           {hintBox ? (
             <rect
               data-testid="map-hint-box"

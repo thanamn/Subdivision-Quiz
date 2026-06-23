@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Geometry } from "geojson";
 import type { Scope, SubdivisionFeature } from "../../../src/domain/types";
 import {
+  countryOutlinePathForFeatures,
   focusTransformForItem,
   tinyMarkerForFeature,
   tinyMarkerOpacity,
@@ -16,7 +17,11 @@ import type { PathDatum } from "../../../src/map/mapTypes";
 const countryScope: Scope = { kind: "country", value: "TST" };
 const worldScope: Scope = { kind: "world", value: "world" };
 
-function makeFeature(id: string, geometry: Geometry): SubdivisionFeature {
+function makeFeature(
+  id: string,
+  geometry: Geometry,
+  countryCode = "TST",
+): SubdivisionFeature {
   return {
     type: "Feature",
     id,
@@ -25,8 +30,8 @@ function makeFeature(id: string, geometry: Geometry): SubdivisionFeature {
       adm1Code: id,
       aliases: [id],
       colorIndex: 0,
-      country: "Testland",
-      countryCode: "TST",
+      country: countryCode === "TST" ? "Testland" : "Otherland",
+      countryCode,
       id,
       localNames: [],
       name: id,
@@ -164,5 +169,42 @@ describe("tiny marker geometry", () => {
     expect(transform.k).toBeGreaterThanOrEqual(FOCUS_TINY_MIN_ZOOM);
     expect(transform.x).toBeCloseTo(WIDTH / 2 - item.tinyMarker.x * transform.k);
     expect(transform.y).toBeCloseTo(HEIGHT / 2 - item.tinyMarker.y * transform.k);
+  });
+});
+
+describe("country outline geometry", () => {
+  it("keeps cross-country edges and removes same-country subdivision edges", () => {
+    const left = makeFeature("left", square(0, 0, 1));
+    const middle = makeFeature("middle", square(1, 0, 1));
+    const right = makeFeature("right", square(2, 0, 1), "OTH");
+
+    const outlinePath = countryOutlinePathForFeatures(
+      [left, middle, right],
+      geoPath(),
+    );
+
+    expect(outlinePath).not.toContain("M1,0L1,1");
+    expect(outlinePath).toContain("M2,0L2,1");
+  });
+
+  it("returns no outline instead of throwing for malformed coordinates", () => {
+    const malformed = makeFeature("malformed", {
+      type: "Polygon",
+      coordinates: [[[0, 0], null, [1, 1], [0, 0]]],
+    } as unknown as Geometry);
+
+    expect(countryOutlinePathForFeatures([malformed], geoPath())).toBe("");
+  });
+
+  it("ignores null geometries while building the remaining outline", () => {
+    const nullGeometry = makeFeature(
+      "null-geometry",
+      null as unknown as Geometry,
+    );
+    const valid = makeFeature("valid", square(0, 0, 1));
+
+    expect(countryOutlinePathForFeatures([nullGeometry, valid], geoPath())).toBe(
+      "M0,0L1,0M1,0L1,1M1,1L0,1M0,1L0,0",
+    );
   });
 });

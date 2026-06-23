@@ -1,51 +1,72 @@
 import { Eye } from "lucide-react";
 import { AnswerListItems } from "./AnswerListItems";
 import type { QuizMode } from "../quiz/quizTypes";
-import type { SubdivisionFeature } from "../domain/types";
+import type { SubdivisionFeature, SubdivisionMediaLookup } from "../domain/types";
 
 export function CompletedList({
   complete,
-  completedReviewFeatures,
+  completedReviewCount,
+  completedReviewPreviewFeatures,
   gaveUp,
-  missingFeatures,
+  mediaLookup,
+  missingCount,
+  missingPreviewFeatures,
   quizMode,
   setActiveId,
 }: {
   complete: boolean;
-  completedReviewFeatures: SubdivisionFeature[];
+  completedReviewCount: number;
+  completedReviewPreviewFeatures: SubdivisionFeature[];
   gaveUp: boolean;
-  missingFeatures: SubdivisionFeature[];
+  mediaLookup: SubdivisionMediaLookup;
+  missingCount: number;
+  missingPreviewFeatures: SubdivisionFeature[];
   quizMode: QuizMode;
   setActiveId: (id: string | null) => void;
 }) {
+  const showingMissing = gaveUp || (quizMode === "type" && complete);
+  const features = showingMissing
+    ? missingPreviewFeatures
+    : completedReviewPreviewFeatures;
+  const totalCount = showingMissing ? missingCount : completedReviewCount;
+  const emptyCopy =
+    quizMode === "find"
+      ? "Completed territories appear here."
+      : "Found answers appear here.";
+
   return (
     <section className="answer-section">
       <div className="section-title">
         <Eye size={18} aria-hidden="true" />
         <h3>
-          {gaveUp
+          {showingMissing
             ? "Missing"
             : quizMode === "find"
               ? "Completed"
-              : complete
-                ? "Missing"
-                : "Found"}
+              : "Found"}
         </h3>
       </div>
       <div className="answer-list">
-        {gaveUp || (quizMode === "type" && complete) ? (
+        {features.length ? (
           <AnswerListItems
-            features={missingFeatures.slice(0, 120)}
-            setActiveId={setActiveId}
-          />
-        ) : completedReviewFeatures.length ? (
-          <AnswerListItems
-            features={completedReviewFeatures.slice(0, 120)}
+            features={features}
+            mediaLookup={mediaLookup}
             setActiveId={setActiveId}
           />
         ) : (
-          <p>{quizMode === "find" ? "Completed territories appear here." : "Found answers appear here."}</p>
+          <p>{emptyCopy}</p>
         )}
+        {totalCount > features.length ? (
+          <p className="answer-list-note">
+            Showing first {features.length.toLocaleString()} of{" "}
+            {totalCount.toLocaleString()}.
+          </p>
+        ) : null}
+        {showingMissing && totalCount > features.length ? (
+          <p className="answer-list-note">
+            Pick a region or country to review a shorter missing list.
+          </p>
+        ) : null}
       </div>
     </section>
   );

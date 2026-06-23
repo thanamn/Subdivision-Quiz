@@ -5,7 +5,8 @@
     justify-content: stretch;
   }
 
-  .header-scope-strip .country-select {
+  .header-scope-strip .country-select,
+  .header-scope-strip .region-select {
     max-width: none;
   }
 
@@ -110,6 +111,7 @@
 
   .select-control,
   .country-select,
+  .region-select,
   .scope-button-group,
   .quiz-mode-switch {
     width: 100%;
@@ -117,7 +119,8 @@
     flex: 0 1 auto;
   }
 
-  .header-scope-strip .country-select {
+  .header-scope-strip .country-select,
+  .header-scope-strip .region-select {
     flex: 0 1 auto;
   }
 }

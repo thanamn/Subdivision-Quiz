@@ -29,7 +29,7 @@ export function CountrySearch({
 }) {
   return (
     <div
-      className="select-control country-select country-combobox"
+      className="select-control country-select scope-combobox"
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
           setCountrySearchOpen(false);
@@ -38,11 +38,11 @@ export function CountrySearch({
       }}
     >
       <label htmlFor="country-search">Country</label>
-      <div className="country-search-box">
-        <Search className="country-search-icon" size={16} aria-hidden="true" />
+      <div className="scope-search-box">
+        <Search className="scope-search-icon" size={16} aria-hidden="true" />
         <input
           id="country-search"
-          className="country-search-input"
+          className="scope-search-input"
           value={countrySearch}
           placeholder={
             countrySearchOpen
@@ -74,11 +74,11 @@ export function CountrySearch({
           }}
           onKeyDown={handleCountrySearchKeyDown}
         />
-        <ChevronDown className="country-search-chevron" size={16} aria-hidden="true" />
+        <ChevronDown className="scope-search-chevron" size={16} aria-hidden="true" />
         {countrySearchOpen ? (
           <div
             id="country-search-results"
-            className="country-search-results"
+            className="scope-search-results"
             role="listbox"
             aria-label="Country results"
           >
@@ -90,8 +90,8 @@ export function CountrySearch({
                   type="button"
                   className={
                     index === countryHighlightIndex
-                      ? "country-search-result is-active"
-                      : "country-search-result"
+                      ? "scope-search-result is-active"
+                      : "scope-search-result"
                   }
                   role="option"
                   aria-selected={scope.kind === "country" && scope.value === country.code}
@@ -105,7 +105,7 @@ export function CountrySearch({
                 </button>
               ))
             ) : (
-              <div className="country-search-empty">No countries found.</div>
+              <div className="scope-search-empty">No countries found.</div>
             )}
           </div>
         ) : null}

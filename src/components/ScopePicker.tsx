@@ -4,6 +4,7 @@ import type { CountrySummary, RegionSummary, Scope } from "../domain/types";
 import type { QuizMode } from "../quiz/quizTypes";
 import { CountrySearch } from "./CountrySearch";
 import { QuizModeSwitch } from "./QuizModeSwitch";
+import { RegionSearch } from "./RegionSearch";
 
 export function ScopePicker({
   countryHighlightIndex,
@@ -52,24 +53,7 @@ export function ScopePicker({
         </button>
       </div>
 
-      <label className="select-control">
-        <span>Region</span>
-        <select
-          value={scope.kind === "region" ? scope.value : ""}
-          onChange={(event) => {
-            if (event.target.value) {
-              setScope({ kind: "region", value: event.target.value });
-            }
-          }}
-        >
-          <option value="">Choose region</option>
-          {regions.map((region) => (
-            <option key={region.name} value={region.name}>
-              {region.name} ({region.count})
-            </option>
-          ))}
-        </select>
-      </label>
+      <RegionSearch regions={regions} scope={scope} setScope={setScope} />
 
       <CountrySearch
         countryHighlightIndex={countryHighlightIndex}
