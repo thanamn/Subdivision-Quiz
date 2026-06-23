@@ -1,6 +1,6 @@
 export const WIDTH = 1000;
 export const HEIGHT = 620;
-export const MAP_MAX_ZOOM = 500;
+export const MAP_MAX_ZOOM = 1000;
 export const FOCUS_MAX_ZOOM = 180;
 export const FOCUS_MIN_ZOOM = 1.15;
 export const FOCUS_TINY_MIN_ZOOM = 28;

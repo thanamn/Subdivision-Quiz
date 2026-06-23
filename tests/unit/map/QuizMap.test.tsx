@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import QuizMap from "../../../src/map/QuizMap";
+import { MAP_MAX_ZOOM } from "../../../src/map/mapConstants";
 import type { Scope, SubdivisionFeature } from "../../../src/domain/types";
 
 const countryScope: Scope = { kind: "country", value: "TST" };
@@ -249,5 +250,25 @@ describe("QuizMap", () => {
     expect(() => fireEvent.click(screen.getByRole("button", { name: "Zoom in" }))).not.toThrow();
     expect(() => fireEvent.click(screen.getByRole("button", { name: "Zoom out" }))).not.toThrow();
     expect(() => fireEvent.click(screen.getByRole("button", { name: "Reset map" }))).not.toThrow();
+  });
+
+  it("keeps wheel gestures from scrolling the page at zoom limits", () => {
+    renderMap();
+
+    const map = screen.getByRole("img", {
+      name: "Interactive subdivision quiz map",
+    });
+    const wheelEvent = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: -120,
+    });
+
+    expect(map.dispatchEvent(wheelEvent)).toBe(false);
+    expect(wheelEvent.defaultPrevented).toBe(true);
+  });
+
+  it("allows deeper manual zoom levels", () => {
+    expect(MAP_MAX_ZOOM).toBeGreaterThan(500);
   });
 });

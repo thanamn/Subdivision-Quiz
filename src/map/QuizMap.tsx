@@ -36,6 +36,10 @@ function initialTinyMarkersVisible() {
   return window.localStorage.getItem(TINY_MARKERS_KEY) === "1";
 }
 
+function preventMapWheelScroll(event: WheelEvent) {
+  event.preventDefault();
+}
+
 function QuizMap({
   clickable = false,
   currentTargetId = null,
@@ -173,6 +177,7 @@ function QuizMap({
       return undefined;
     }
 
+    const svgNode = svgRef.current;
     const svg = select(svgRef.current);
     const updateZoomScale = (scale: number) => {
       zoomScaleRef.current = scale;
@@ -197,9 +202,16 @@ function QuizMap({
       });
 
     svg.call(mapZoom).on("dblclick.zoom", null);
+    svgNode.addEventListener("wheel", preventMapWheelScroll, {
+      capture: true,
+      passive: false,
+    });
     zoomRef.current = mapZoom;
 
     return () => {
+      svgNode.removeEventListener("wheel", preventMapWheelScroll, {
+        capture: true,
+      });
       svg.on(".zoom", null);
       if (zoomFrameRef.current !== null) {
         window.cancelAnimationFrame(zoomFrameRef.current);
