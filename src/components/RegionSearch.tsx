@@ -155,7 +155,8 @@ export function RegionSearch({
                 >
                   <span>{region.name}</span>
                   <small>
-                    {region.count.toLocaleString()} / {region.countries.toLocaleString()}
+                    {region.count.toLocaleString()} subdivisions |{" "}
+                    {region.countries.toLocaleString()} countries
                   </small>
                 </button>
               ))

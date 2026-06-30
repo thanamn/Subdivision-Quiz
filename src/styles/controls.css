@@ -193,6 +193,7 @@
   border-radius: 6px;
   background: transparent;
   color: #172126;
+  font-weight: 400;
   text-align: left;
 }
 
@@ -203,19 +204,28 @@
 }
 
 .scope-search-result[aria-selected="true"] {
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .scope-search-result span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .scope-search-result small {
   color: #68777e;
   font-size: 0.78rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.region-select .scope-search-result {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 3px;
 }
 
 .scope-search-empty {
