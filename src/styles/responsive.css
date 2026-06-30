@@ -109,6 +109,29 @@
     grid-template-columns: 1fr;
   }
 
+  .tutorial-overlay {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .tutorial-card {
+    gap: 13px;
+    max-height: calc(100vh - 24px);
+    padding: 24px 18px 18px;
+  }
+
+  .tutorial-card h2 {
+    font-size: 1.8rem;
+  }
+
+  .tutorial-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .tutorial-start {
+    justify-self: center;
+  }
+
   .select-control,
   .country-select,
   .region-select,

@@ -4,7 +4,7 @@ import type { QuizMode } from "../quiz/quizTypes";
 export const LAST_SCOPE_KEY = "subdivision-quiz:last-scope";
 export const MATCH_MODE_KEY = "subdivision-quiz:match-mode";
 export const QUIZ_MODE_KEY = "subdivision-quiz:quiz-mode";
-export const HELP_CARD_KEY = "subdivision-quiz:help-dismissed:v3";
+export const TUTORIAL_KEY = "subdivision-quiz:tutorial-dismissed:v1";
 
 export function initialScope(): Scope {
   if (typeof window === "undefined") {
@@ -68,10 +68,10 @@ export function progressStorageKey(key: string, mode: QuizMode) {
     : `subdivision-quiz:find-progress:${key}`;
 }
 
-export function initialHelpCardOpen() {
+export function initialTutorialOpen() {
   if (typeof window === "undefined") {
     return false;
   }
 
-  return window.localStorage.getItem(HELP_CARD_KEY) !== "1";
+  return window.localStorage.getItem(TUTORIAL_KEY) !== "1";
 }

@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { promptNames } from "../domain/featureNames";
 import type { MatchMode, QuizMode } from "../quiz/quizTypes";
 import { EMPTY_FIND_STATS } from "../quiz/quizTypes";
 import {
-  HELP_CARD_KEY,
-  initialHelpCardOpen,
   initialQuizMode,
   initialScope,
+  initialTutorialOpen,
   LAST_SCOPE_KEY,
   MATCH_MODE_KEY,
   QUIZ_MODE_KEY,
+  TUTORIAL_KEY,
   urlForScopeAndMode,
 } from "./storage";
 import {
@@ -26,10 +26,10 @@ import {
   NATIVE_LABEL_FEATURE_LIMIT,
 } from "../domain/nativeNames";
 import { CompletionConfetti } from "../components/CompletionConfetti";
-import { HelpCard } from "../components/HelpCard";
 import { NoticeBar } from "../components/NoticeBar";
 import { ProgressStats } from "../components/ProgressStats";
 import { SidePanel } from "../components/SidePanel";
+import { TutorialOverlay } from "../components/TutorialOverlay";
 import { TopBar } from "../components/TopBar";
 import { FindActions } from "../quiz/find/FindActions";
 import { FindPrompt } from "../quiz/find/FindPrompt";
@@ -147,7 +147,7 @@ export default function App() {
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
   const [progressReady, setProgressReady] = useState(false);
   const [progressKey, setProgressKey] = useState<string | null>(null);
-  const [showHelpCard, setShowHelpCard] = useState(initialHelpCardOpen);
+  const [showTutorial, setShowTutorial] = useState(initialTutorialOpen);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [confettiRun, setConfettiRun] = useState(0);
   const shouldLoadSubdivisionMedia =
@@ -597,13 +597,13 @@ export default function App() {
     setNotice("Progress reset.");
   }
 
-  function dismissHelpCard() {
-    window.localStorage.setItem(HELP_CARD_KEY, "1");
-    setShowHelpCard(false);
+  const dismissTutorial = useCallback(() => {
+    window.localStorage.setItem(TUTORIAL_KEY, "1");
+    setShowTutorial(false);
     if (quizMode === "type" && window.matchMedia("(min-width: 720px)").matches) {
       window.requestAnimationFrame(() => inputRef.current?.focus());
     }
-  }
+  }, [quizMode]);
 
   function selectCountry(country: { code: string; name: string }) {
     setScope({ kind: "country", value: country.code });
@@ -696,6 +696,7 @@ export default function App() {
   return (
     <div className="app">
       <CompletionConfetti run={confettiRun} />
+      {showTutorial ? <TutorialOverlay dismissTutorial={dismissTutorial} /> : null}
 
       <TopBar
         countryHighlightIndex={countryHighlightIndex}
@@ -719,8 +720,6 @@ export default function App() {
 
       <main className="workspace">
         <section className="play-area">
-          {showHelpCard ? <HelpCard dismissHelpCard={dismissHelpCard} /> : null}
-
           <ProgressStats
             completedCount={quizMode === "find" ? completedIds.size : guessed.size}
             countries={countries}
@@ -805,7 +804,6 @@ export default function App() {
               activeId={activeId}
               scope={scope}
               clickable={quizMode === "find" && !complete && !gaveUp}
-              forceTinyMarkers={quizMode === "find"}
               currentTargetId={findQuiz.currentTarget?.properties.id || null}
               focusFeatureId={findQuiz.mapFocusRequest?.id || null}
               focusRequestNonce={findQuiz.mapFocusRequest?.nonce || 0}

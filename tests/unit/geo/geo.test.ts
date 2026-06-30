@@ -412,8 +412,8 @@ describe("country, region, and scope helpers", () => {
 
 describe("visibleTinyMarkerItems", () => {
   it("keeps required collapsed-geometry markers visible when optional markers are off", () => {
-    const required = { id: "SYC-5220", tinyMarker: { alwaysVisible: true } };
-    const optional = { id: "SYC-5203", tinyMarker: { alwaysVisible: false } };
+    const required = { id: "collapsed-point", tinyMarker: { alwaysVisible: true } };
+    const optional = { id: "SYC-5220", tinyMarker: { alwaysVisible: false } };
 
     expect(visibleTinyMarkerItems([required, optional], false)).toEqual([
       required,

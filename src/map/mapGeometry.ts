@@ -252,7 +252,8 @@ export function tinyMarkerForFeature(
   }
 
   const geographicArea = geoArea(feature);
-  const collapsedGeometry = geographicArea < COLLAPSED_GEOGRAPHIC_AREA;
+  const collapsedGeometry =
+    geographicArea < COLLAPSED_GEOGRAPHIC_AREA && (width === 0 || height === 0);
   const geographicallyTiny = geographicArea < TINY_GEOGRAPHIC_AREA;
   const projectedTiny =
     scope.kind === "country" && tinyProjectedSize(bounds);

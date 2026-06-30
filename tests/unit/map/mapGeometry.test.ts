@@ -2,8 +2,13 @@ import { geoMercator, geoPath } from "d3-geo";
 import { describe, expect, it } from "vitest";
 import type { Geometry } from "geojson";
 import type { Scope, SubdivisionFeature } from "../../../src/domain/types";
+import topology from "../../../public/data/admin1.topo.json";
+import countryRegions from "../../../public/data/country-regions.json";
+import { loadAdmin1Topology } from "../../../src/geo/topology";
+import type { CountryRegionLookup } from "../../../src/geo/topologyTypes";
 import {
   countryOutlinePathForFeatures,
+  featureCollection,
   focusTransformForItem,
   tinyMarkerForFeature,
   tinyMarkerOpacity,
@@ -16,6 +21,10 @@ import type { PathDatum } from "../../../src/map/mapTypes";
 
 const countryScope: Scope = { kind: "country", value: "TST" };
 const worldScope: Scope = { kind: "world", value: "world" };
+const allFeatures = loadAdmin1Topology(
+  topology,
+  countryRegions as CountryRegionLookup,
+);
 
 function makeFeature(
   id: string,
@@ -82,7 +91,7 @@ describe("tiny marker geometry", () => {
     expect(tinyMarkerForFeature(projectedSmall, path, worldScope)).toBeNull();
   });
 
-  it("keeps collapsed geometries as required always-visible helper dots", () => {
+  it("keeps zero-size geometries as required always-visible helper dots", () => {
     const collapsedPoint = makeFeature("collapsed", {
       type: "Point",
       coordinates: [100, 4],
@@ -169,6 +178,41 @@ describe("tiny marker geometry", () => {
     expect(transform.k).toBeGreaterThanOrEqual(FOCUS_TINY_MIN_ZOOM);
     expect(transform.x).toBeCloseTo(WIDTH / 2 - item.tinyMarker.x * transform.k);
     expect(transform.y).toBeCloseTo(HEIGHT / 2 - item.tinyMarker.y * transform.k);
+  });
+
+  it("treats tiny but drawable Seychelles districts as optional helper dots", () => {
+    const seychelles = allFeatures.filter(
+      (feature) => feature.properties.countryCode === "SYC",
+    );
+    const takamaka = seychelles.find(
+      (feature) => feature.properties.name === "Takamaka",
+    );
+    expect(takamaka).toBeTruthy();
+
+    const path = geoPath(
+      geoMercator().fitExtent(
+        [
+          [18, 18],
+          [WIDTH - 18, HEIGHT - 18],
+        ],
+        featureCollection(seychelles),
+      ),
+    );
+    const marker = tinyMarkerForFeature(
+      takamaka!,
+      path,
+      { kind: "country", value: "SYC" },
+    );
+
+    expect(marker).toEqual(
+      expect.objectContaining({
+        alwaysVisible: false,
+        height: expect.any(Number),
+        width: expect.any(Number),
+      }),
+    );
+    expect(marker?.width).toBeGreaterThan(0);
+    expect(marker?.height).toBeGreaterThan(0);
   });
 });
 

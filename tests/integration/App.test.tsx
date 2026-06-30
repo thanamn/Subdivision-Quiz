@@ -88,7 +88,7 @@ const allFeatures = loadAdmin1Topology(
 const mediaLookup = (subdivisionMedia as SubdivisionMediaData).media || {};
 
 const QUIZ_MODE_KEY = "subdivision-quiz:quiz-mode";
-const HELP_CARD_KEY = "subdivision-quiz:help-dismissed:v3";
+const TUTORIAL_KEY = "subdivision-quiz:tutorial-dismissed:v1";
 
 function featuresFor(countryCode: string) {
   return allFeatures.filter(
@@ -334,26 +334,30 @@ describe("App loading and shell", () => {
     expect(metricValue("time")).toBe("0:00");
   });
 
-  it("shows and dismisses the help card using the current localStorage key", async () => {
+  it("shows and dismisses the tutorial overlay using the current localStorage key", async () => {
     const user = userEvent.setup();
     await renderLoaded("/");
 
-    expect(screen.getByLabelText("How to play")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", {
+      name: "First-level divisions around the world",
+    });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("How to play!")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Small subdivisions may appear as clickable dots when they are hard to select at the current zoom.",
+      within(dialog).getByText(
+        "Many names can work for the same place, like Hokkaidō, Hokkaido, or 北海道.",
       ),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByTitle("Dismiss"));
+    await user.click(within(dialog).getByRole("button", { name: "Start playing" }));
 
-    expect(screen.queryByLabelText("How to play")).not.toBeInTheDocument();
-    expect(window.localStorage.getItem(HELP_CARD_KEY)).toBe("1");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(TUTORIAL_KEY)).toBe("1");
 
     cleanup();
     await renderLoaded("/");
 
-    expect(screen.queryByLabelText("How to play")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 
