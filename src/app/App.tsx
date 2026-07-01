@@ -66,6 +66,19 @@ type CompletionState = {
   wasComplete: boolean;
 };
 
+type CountryCompletionState = {
+  completedCodes: Set<string>;
+  progressKey: string | null;
+  ready: boolean;
+};
+
+type CountryCompletionSummary = {
+  code: string;
+  completed: number;
+  name: string;
+  total: number;
+};
+
 const STANDARD_ANSWER_LIST_LIMIT = 120;
 const LARGE_SCOPE_ANSWER_LIST_LIMIT = 48;
 const LARGE_SCOPE_FEATURE_THRESHOLD = 400;
@@ -112,12 +125,38 @@ function sortedFeaturePreview(
   return sorted ? preview : preview.sort(byCountryThenName);
 }
 
+function countryCompletionNotice(countries: CountryCompletionSummary[]) {
+  if (!countries.length) {
+    return "";
+  }
+
+  if (countries.length === 1) {
+    const [country] = countries;
+    return `${country.name} complete.`;
+  }
+
+  const names = countries
+    .slice(0, 3)
+    .map((country) => country.name)
+    .join(", ");
+  const remaining = countries.length - 3;
+
+  return remaining > 0
+    ? `${countries.length} countries complete: ${names}, and ${remaining} more.`
+    : `${countries.length} countries complete: ${names}.`;
+}
+
 export default function App() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const completionStateRef = useRef<CompletionState>({
     progressKey: null,
     ready: false,
     wasComplete: false,
+  });
+  const countryCompletionStateRef = useRef<CountryCompletionState>({
+    completedCodes: new Set(),
+    progressKey: null,
+    ready: false,
   });
   const nativeNameAttemptedQidsRef = useRef<Set<string>>(new Set());
   const subdivisionMediaAttemptedRef = useRef(false);
@@ -150,6 +189,10 @@ export default function App() {
   const [showTutorial, setShowTutorial] = useState(initialTutorialOpen);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [confettiRun, setConfettiRun] = useState(0);
+  const [completedCountryGlow, setCompletedCountryGlow] = useState({
+    codes: [] as string[],
+    run: 0,
+  });
   const shouldLoadSubdivisionMedia =
     quizMode === "find" ||
     guessed.size > 0 ||
@@ -301,6 +344,28 @@ export default function App() {
       ),
     [activeFeatures, answerListLimit, guessed, quizMode, revealedIds],
   );
+  const countryCompletionSummaries = useMemo(() => {
+    const countrySummaries = new Map<string, CountryCompletionSummary>();
+
+    for (const feature of activeFeatures) {
+      const { countryCode, country, id } = feature.properties;
+      const current = countrySummaries.get(countryCode);
+      if (current) {
+        current.total += 1;
+        current.completed += completedIds.has(id) ? 1 : 0;
+        continue;
+      }
+
+      countrySummaries.set(countryCode, {
+        code: countryCode,
+        completed: completedIds.has(id) ? 1 : 0,
+        name: country,
+        total: 1,
+      });
+    }
+
+    return [...countrySummaries.values()];
+  }, [activeFeatures, completedIds]);
   const complete = total > 0 && completedIds.size >= total;
   const { elapsed, resetQuizTimer, setStartedAt, startQuizTimer } =
     useQuizTimer(complete);
@@ -468,6 +533,7 @@ export default function App() {
     setRecent([]);
     setActiveId(null);
     setRevealedIds(new Set());
+    setCompletedCountryGlow((current) => ({ codes: [], run: current.run }));
     findQuiz.resetFindQuiz();
 
     try {
@@ -540,6 +606,67 @@ export default function App() {
       wasComplete: complete,
     };
   }, [complete, currentProgressKey, gaveUp, progressKey, progressReady, total]);
+
+  useEffect(() => {
+    const completedCountries = countryCompletionSummaries.filter(
+      (country) => country.total > 0 && country.completed >= country.total,
+    );
+    const completedCodes = new Set(
+      completedCountries.map((country) => country.code),
+    );
+
+    if (
+      !progressReady ||
+      progressKey !== currentProgressKey ||
+      !total ||
+      scope.kind === "country"
+    ) {
+      countryCompletionStateRef.current = {
+        completedCodes,
+        progressKey: currentProgressKey,
+        ready: false,
+      };
+      return;
+    }
+
+    const previous = countryCompletionStateRef.current;
+
+    if (previous.progressKey !== currentProgressKey || !previous.ready) {
+      countryCompletionStateRef.current = {
+        completedCodes,
+        progressKey: currentProgressKey,
+        ready: true,
+      };
+      return;
+    }
+
+    const newlyCompletedCountries = completedCountries
+      .filter((country) => !previous.completedCodes.has(country.code))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (newlyCompletedCountries.length && !complete && !gaveUp) {
+      setNotice(countryCompletionNotice(newlyCompletedCountries));
+      setCompletedCountryGlow((current) => ({
+        codes: newlyCompletedCountries.map((country) => country.code),
+        run: current.run + 1,
+      }));
+    }
+
+    countryCompletionStateRef.current = {
+      completedCodes,
+      progressKey: currentProgressKey,
+      ready: true,
+    };
+  }, [
+    complete,
+    countryCompletionSummaries,
+    currentProgressKey,
+    gaveUp,
+    progressKey,
+    progressReady,
+    scope.kind,
+    total,
+  ]);
 
   useEffect(() => {
     if (quizMode === "type" && window.matchMedia("(min-width: 720px)").matches) {
@@ -802,6 +929,8 @@ export default function App() {
               wrongIds={findQuiz.wrongIdSet}
               wrongFlashId={findQuiz.wrongFlashId}
               activeId={activeId}
+              completedCountryGlowCodes={completedCountryGlow.codes}
+              completedCountryGlowRun={completedCountryGlow.run}
               scope={scope}
               clickable={quizMode === "find" && !complete && !gaveUp}
               currentTargetId={findQuiz.currentTarget?.properties.id || null}

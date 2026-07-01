@@ -44,6 +44,18 @@ type WrongFlashOverlayProps = {
   zoomScale: number;
 };
 
+type CountryGlowItem = {
+  code: string;
+  d: string;
+  markers: PathDatum[];
+};
+
+type CountryCompletionGlowOverlayProps = {
+  items: CountryGlowItem[];
+  run: number;
+  zoomScale: number;
+};
+
 export const MapShapes = memo(function MapShapes({
   activeId,
   clickable,
@@ -197,3 +209,50 @@ export const WrongFlashOverlay = memo(function WrongFlashOverlay({
     </g>
   );
 });
+
+export const CountryCompletionGlowOverlay = memo(
+  function CountryCompletionGlowOverlay({
+    items,
+    run,
+    zoomScale,
+  }: CountryCompletionGlowOverlayProps) {
+    if (!items.length || !run) {
+      return null;
+    }
+
+    return (
+      <g
+        key={run}
+        className="country-completion-glow-overlay"
+        data-testid="country-completion-glow-overlay"
+        pointerEvents="none"
+      >
+        {items.map((item) => (
+          <g
+            key={item.code}
+            className="country-completion-glow-item"
+            data-testid={`country-completion-glow-${item.code}`}
+          >
+            {item.d ? (
+              <>
+                <path className="country-completion-glow-halo" d={item.d} />
+                <path className="country-completion-glow-line" d={item.d} />
+              </>
+            ) : null}
+            {item.markers.map((marker) =>
+              marker.tinyMarker ? (
+                <circle
+                  key={marker.id}
+                  className="country-completion-glow-marker"
+                  cx={marker.tinyMarker.x}
+                  cy={marker.tinyMarker.y}
+                  r={Math.max(tinyMarkerRadius(marker.tinyMarker, zoomScale), 5 / zoomScale)}
+                />
+              ) : null,
+            )}
+          </g>
+        ))}
+      </g>
+    );
+  },
+);

@@ -19,6 +19,8 @@ import type {
 type MockQuizMapProps = {
   activeId: string | null;
   clickable?: boolean;
+  completedCountryGlowCodes?: string[];
+  completedCountryGlowRun?: number;
   currentTargetId?: string | null;
   features: SubdivisionFeature[];
   guessed: Set<string>;
@@ -33,6 +35,8 @@ vi.mock("../../src/map/QuizMap", () => ({
   default: function MockQuizMap({
     activeId,
     clickable = false,
+    completedCountryGlowCodes = [],
+    completedCountryGlowRun = 0,
     currentTargetId = null,
     features,
     guessed,
@@ -50,6 +54,8 @@ vi.mock("../../src/map/QuizMap", () => ({
         data-active-id={activeId || ""}
         data-current-target-id={currentTargetId || ""}
         data-feature-count={features.length}
+        data-glow-codes={completedCountryGlowCodes.join(",")}
+        data-glow-run={completedCountryGlowRun}
         data-hint-level={hintLevel}
       >
         {renderButtons
@@ -374,6 +380,18 @@ describe("App Type mode", () => {
     expect(window.localStorage.getItem("subdivision-quiz:progress:country:MEX")).toBe(
       JSON.stringify(["MEX-2727"]),
     );
+  });
+
+  it("quietly announces when a country is completed inside a region", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(TUTORIAL_KEY, "1");
+    await renderLoaded("/?region=Caribbean&mode=type");
+
+    await user.type(screen.getByPlaceholderText("Type a subdivision"), "Aruba");
+
+    expect(await screen.findByText(/Aruba complete\./)).toBeInTheDocument();
+    expect(screen.getByTestId("quiz-map")).toHaveAttribute("data-glow-codes", "ABW");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("rejects invalid guesses with the current notice", async () => {

@@ -15,6 +15,24 @@
   }
 }
 
+@keyframes country-completion-glow {
+  0% {
+    opacity: 0;
+  }
+
+  16% {
+    opacity: 1;
+  }
+
+  62% {
+    opacity: 0.82;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
 @keyframes tooltip-in {
   0% {
     opacity: 0;
@@ -54,6 +72,7 @@
   }
 
   .map-tooltip,
+  .country-completion-glow-overlay,
   .wrong-flash-overlay {
     animation: none;
   }

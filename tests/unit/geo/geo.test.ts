@@ -376,35 +376,74 @@ describe("country, region, and scope helpers", () => {
     const countries = buildCountrySummaries(allFeatures);
     const regions = buildRegionSummaries(countries);
     const asia = regions.find((region) => region.name === "Asia");
+    const eastAsia = regions.find((region) => region.name === "East Asia");
+    const southeastAsia = regions.find(
+      (region) => region.name === "Southeast Asia",
+    );
+    const arabWorld = regions.find((region) => region.name === "Arab World");
 
-    expect(regions.map((region) => region.name)).toEqual([
+    expect(regions.map((region) => region.name)).toEqual(expect.arrayContaining([
       "Africa",
+      "Northern Africa",
+      "Western Africa",
+      "Central Africa",
+      "Eastern Africa",
+      "Southern Africa",
       "Americas",
-      "Antarctic",
+      "North America",
+      "Caribbean",
+      "Central America",
+      "South America",
       "Asia",
+      "East Asia",
+      "Southeast Asia",
+      "South Asia",
+      "Central Asia",
+      "Western Asia",
+      "Arab World",
       "Europe",
       "Oceania",
-    ]);
+      "Antarctic",
+    ]));
     expect(asia?.countries).toBeGreaterThan(40);
     expect(asia?.count).toBe(
       countries
         .filter((country) => country.region === "Asia")
         .reduce((sum, country) => sum + country.count, 0),
     );
+    expect(eastAsia?.count).toBe(
+      countries
+        .filter((country) => country.subregion === "Eastern Asia")
+        .reduce((sum, country) => sum + country.count, 0),
+    );
+    expect(southeastAsia?.count).toBe(
+      countries
+        .filter((country) => country.subregion === "South-Eastern Asia")
+        .reduce((sum, country) => sum + country.count, 0),
+    );
+    expect(arabWorld?.countries).toBeGreaterThan(10);
   });
 
   it("checks feature scope membership and labels", () => {
     const countries = buildCountrySummaries(allFeatures);
     const japan = featuresFor("JPN")[0];
+    const vietnam = featuresFor("VNM")[0];
+    const cuba = featuresFor("CUB")[0];
+    const egypt = featuresFor("EGY")[0];
 
     expect(featureInScope(japan, { kind: "world", value: "world" })).toBe(true);
     expect(featureInScope(japan, { kind: "country", value: "JPN" })).toBe(true);
     expect(featureInScope(japan, { kind: "country", value: "CAN" })).toBe(false);
     expect(featureInScope(japan, { kind: "region", value: "Asia" })).toBe(true);
     expect(featureInScope(japan, { kind: "region", value: "Europe" })).toBe(false);
+    expect(featureInScope(japan, { kind: "region", value: "East Asia" })).toBe(true);
+    expect(featureInScope(vietnam, { kind: "region", value: "Southeast Asia" })).toBe(true);
+    expect(featureInScope(cuba, { kind: "region", value: "Caribbean" })).toBe(true);
+    expect(featureInScope(egypt, { kind: "region", value: "Arab World" })).toBe(true);
     expect(scopeKey({ kind: "country", value: "JPN" })).toBe("country:JPN");
     expect(scopeLabel({ kind: "world", value: "world" }, countries)).toBe("World");
     expect(scopeLabel({ kind: "region", value: "Asia" }, countries)).toBe("Asia");
+    expect(scopeLabel({ kind: "region", value: "East Asia" }, countries)).toBe("East Asia");
     expect(scopeLabel({ kind: "country", value: "JPN" }, countries)).toBe("Japan");
     expect(scopeLabel({ kind: "country", value: "XXX" }, countries)).toBe("XXX");
   });

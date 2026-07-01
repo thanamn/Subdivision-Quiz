@@ -173,6 +173,16 @@ describe("QuizMap", () => {
     expect(screen.getByTestId("country-outline-line")).toBeInTheDocument();
   });
 
+  it("draws a transient country-completion glow when requested", () => {
+    renderMap({
+      completedCountryGlowCodes: ["TST"],
+      completedCountryGlowRun: 1,
+    });
+
+    expect(screen.getByTestId("country-completion-glow-overlay")).toBeInTheDocument();
+    expect(screen.getByTestId("country-completion-glow-TST")).toBeInTheDocument();
+  });
+
   it("skips the expensive country outline in world reveal state", () => {
     renderMap({
       revealed: true,

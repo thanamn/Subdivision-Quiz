@@ -147,6 +147,35 @@
   stroke-width: 1.05;
 }
 
+.country-completion-glow-overlay {
+  opacity: 0;
+  animation: country-completion-glow 1450ms ease-out;
+}
+
+.country-completion-glow-halo,
+.country-completion-glow-line,
+.country-completion-glow-marker {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.country-completion-glow-halo {
+  stroke: rgba(15, 139, 141, 0.42);
+  stroke-width: 7.5;
+}
+
+.country-completion-glow-line {
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 2.1;
+}
+
+.country-completion-glow-marker {
+  stroke: rgba(15, 139, 141, 0.58);
+  stroke-width: 4.4;
+}
+
 .wrong-flash-overlay {
   opacity: 0;
   transform-box: fill-box;

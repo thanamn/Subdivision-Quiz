@@ -6,7 +6,12 @@ import "d3-transition";
 import { zoom, zoomIdentity, type ZoomBehavior } from "d3-zoom";
 import type { SubdivisionFeature } from "../domain/types";
 import { MapControls } from "./MapControls";
-import { MapShapes, TinyMarkers, WrongFlashOverlay } from "./MapShapes";
+import {
+  CountryCompletionGlowOverlay,
+  MapShapes,
+  TinyMarkers,
+  WrongFlashOverlay,
+} from "./MapShapes";
 import { MapTooltip } from "./MapTooltip";
 import {
   HEIGHT,
@@ -42,6 +47,8 @@ function preventMapWheelScroll(event: WheelEvent) {
 
 function QuizMap({
   clickable = false,
+  completedCountryGlowCodes = [],
+  completedCountryGlowRun = 0,
   currentTargetId = null,
   focusFeatureId = null,
   focusRequestNonce = 0,
@@ -150,6 +157,29 @@ function QuizMap({
     () => pathData.find((item) => item.id === wrongFlashId) || null,
     [pathData, wrongFlashId],
   );
+  const countryCompletionGlowItems = useMemo(() => {
+    if (!completedCountryGlowCodes.length || !completedCountryGlowRun) {
+      return [];
+    }
+
+    return [...new Set(completedCountryGlowCodes)]
+      .map((countryCode) => {
+        const countryFeatures = features.filter(
+          (feature) => feature.properties.countryCode === countryCode,
+        );
+        const markers = pathData.filter(
+          (item) =>
+            item.feature.properties.countryCode === countryCode && item.tinyMarker,
+        );
+
+        return {
+          code: countryCode,
+          d: countryOutlinePathForFeatures(countryFeatures, path),
+          markers,
+        };
+      })
+      .filter((item) => item.d || item.markers.length);
+  }, [completedCountryGlowCodes, completedCountryGlowRun, features, path, pathData]);
   const shouldShowCountryOutline = revealed && scope.kind !== "world";
   const countryOutlinePath = useMemo(
     () =>
@@ -348,6 +378,11 @@ function QuizMap({
             onEnter={enterFeature}
             onLeave={leaveFeature}
             onMove={showTooltip}
+          />
+          <CountryCompletionGlowOverlay
+            items={countryCompletionGlowItems}
+            run={completedCountryGlowRun}
+            zoomScale={zoomScale}
           />
           {countryOutlinePath ? (
             <g className="country-outline-layer" aria-hidden="true">

@@ -12,6 +12,8 @@ export type TooltipState = {
 
 export type QuizMapProps = {
   clickable?: boolean;
+  completedCountryGlowCodes?: string[];
+  completedCountryGlowRun?: number;
   currentTargetId?: string | null;
   focusFeatureId?: string | null;
   focusRequestNonce?: number;
